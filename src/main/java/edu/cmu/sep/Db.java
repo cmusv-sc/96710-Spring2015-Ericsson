@@ -3,7 +3,7 @@ package edu.cmu.sep;
 import java.util.*;
 import java.io.*;
 
-class Db {
+public class Db {
     private String filename;
     public Db(String filename) {
         this.filename = filename;
