@@ -1,9 +1,12 @@
+package edu.cmu.sep;
+
 import java.util.*;
+import edu.cmu.sep.Db;
 
 class Sls {
 
     private static final Random RAND = new Random();
-    private static final Db DB = new Db("data.csv");
+    private static final Db DB = new Db("data/data.csv");
 
     public static class State {
         public static final int MAX_FEATURES = 2;

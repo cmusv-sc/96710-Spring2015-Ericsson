@@ -1,3 +1,5 @@
+package edu.cmu.sep;
+
 import java.util.*;
 import java.io.*;
 
@@ -10,7 +12,9 @@ class Db {
     public List<Integer> getData(int index) {
         Scanner s = null;
         try {
-            s = new Scanner(new File(filename));
+            ClassLoader classLoader = getClass().getClassLoader();
+            String absoluteFilename = classLoader.getResource(this.filename).getFile();
+            s = new Scanner(new File(absoluteFilename));
         } catch (IOException e) {
             e.printStackTrace();
         }
