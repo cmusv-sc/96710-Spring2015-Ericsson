@@ -44,8 +44,10 @@ public class OneFeatureGenerator {
           GzipFile gzipFile = new GzipFile(inputFilePath + "/" + fileList[i].getName());
           String flatFile = gzipFile.gunZipFile();
           if (fileList[i].canRead()) {
-            if (fileList[i].getName().contains("usages"))
+            if (fileList[i].getName().contains("usages")) {
               processGoogleDatasetUsageFile(flatFile);
+              //processGoogleDatasetJobEventsFile(flatFile);
+            }
           }
 
           else
@@ -86,6 +88,35 @@ public class OneFeatureGenerator {
       e.printStackTrace();
     }
   }
+  
+  private static void processGoogleDatasetJobEventsFile(String file) throws Exception {
+    FlatFileReader reader = new FlatFileReader(file, ',');
+
+    try {
+      File outputDir = new File("outputData/task_events");
+      if (!outputDir.exists()) {
+        outputDir.mkdirs();
+      }
+
+      String output = file.replaceFirst("inputData", "outputData");
+      FileOutputStream out = new FileOutputStream(output);
+      Map<String, String> keyMap = new HashMap<String, String>();
+
+      String[] fields = reader.readRecord();
+      while (fields != null) {
+        // We assume jobId is a required field
+        if (fields[3] == null)
+          break;
+
+        generateNewIdenticalFieldForJobEvent(fields, keyMap);
+        fields = reader.readRecord();
+      }
+      generateOutputFile(out, keyMap);
+      out.close();
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+  }
 
   private static void generateNewIdenticalFieldForUsage(String[] fields,  Map<String, Long> keyMap) {
     String startTime = fields[0], endTime = fields[1], jobId = fields[2], taskIndex = fields[3], machineId = fields[4],
@@ -103,8 +134,27 @@ public class OneFeatureGenerator {
 
     System.out.println("Check!");
   }
+  
+  private static void generateNewIdenticalFieldForJobEvent(String[] fields,  Map<String, String> keyMap) {
+    String time = fields[0], missingInfo = fields[1], jobId = fields[2], 
+            eventType = fields[3], user = fields[4], 
+            schedulingClass = fields[5], jobName = fields[6], 
+            logicalJobName = fields[7];
+  
+    
+    final int JOB_FAIL_CODE = 3;
+    String jobStatus;
+    if (Integer.parseInt(eventType) == JOB_FAIL_CODE) {
+        jobStatus = "FAIL";
+    }
+    else {
+        jobStatus = "NO_FAIL";
+    }
+    
+    keyMap.put(jobId, jobStatus);
+  }
 
-  private static void generateOutputFile (FileOutputStream out,  Map<String, Long> keyMap) {
+  private static void generateOutputFile (FileOutputStream out,  Map keyMap) {
 
     String dilimit = ", ";
     String endLine = "\n";
