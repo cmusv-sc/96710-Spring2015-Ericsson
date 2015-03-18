@@ -3,8 +3,10 @@ package edu.cmu.sep.FeatureGenerator;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.logging.Logger;
 
@@ -14,6 +16,8 @@ import java.util.logging.Logger;
  */
 public class OneFeatureGenerator {
 
+  private static final int NUM_FEATURES = 2;
+  
   public static void main(String[] argv) throws Exception {
 //    if (argv.length != 3) {
 //      System.out.println("Usage: java -classpath DatabasePatch.jar OneFeatureGenerator [task_usage] [2] [3]");
@@ -23,12 +27,54 @@ public class OneFeatureGenerator {
     //String output = argv[1];
 
     //String inputFilePath = setWorkingInputFile(argv[0]);
-    String inputFilePath = setWorkingInputFile("task_usage");
-    processGoogleDatasetFiles(inputFilePath);
+    //String inputFilePath = setWorkingInputFile("task_usage");
+    processGoogleDatasetFiles();
   }
 
-  private static String setWorkingInputFile(String inputFile) {
-    return "inputData/" + inputFile;
+  private static void processGoogleDatasetFiles() throws Exception {
+      File inputDir = new File("inputData/");
+      if (!inputDir.exists()) {
+        System.out.println("InputFile directory does not exist.");
+        return;
+      }
+      
+      File topLevelFiles[] = inputDir.listFiles();
+      ArrayList tableArrayList = new ArrayList<File>();
+      for (int i = 0; i < topLevelFiles.length; i++) {
+          if (topLevelFiles[i].isDirectory()) {
+              tableArrayList.add(topLevelFiles[i]);
+          }
+      }
+ 
+      File[] tableList = new File[tableArrayList.size()];
+      
+      for (int i = 0; i < tableArrayList.size(); i++) {
+          tableList[i] = (File)tableArrayList.get(i);
+      }
+
+      tableArrayList = null;
+      
+      // Unzip all files
+      for (int i = 0; i < tableList.length; i++) {
+        File tableFiles[] = tableList[i].listFiles();
+        for (int j = 0; j < tableFiles.length; j++) {
+            if (tableFiles[j].isFile() && tableFiles[j].getName().endsWith("gz")) {
+                GzipFile gzipFile = new GzipFile(tableFiles[j].getAbsolutePath());
+                gzipFile.gunZipFile(); 
+                tableFiles[j].delete();
+            }
+        }
+      }
+      
+      File[] job_events_files = tableList[0].listFiles();
+      File[] machine_attributes_files = tableList[1].listFiles();
+      File[] machine_events_files = tableList[2].listFiles();
+      File[] task_constraints_files = tableList[3].listFiles();
+      File[] task_events_files = tableList[4].listFiles();
+      File[] task_usage_files = tableList[5].listFiles();
+      
+      processGoogleDatasetJobs(job_events_files, machine_attributes_files, machine_events_files, task_constraints_files, task_events_files, task_usage_files);
+      
   }
 
   private static void processGoogleDatasetFiles(String inputFilePath) throws Exception {
@@ -44,9 +90,12 @@ public class OneFeatureGenerator {
           GzipFile gzipFile = new GzipFile(inputFilePath + "/" + fileList[i].getName());
           String flatFile = gzipFile.gunZipFile();
           if (fileList[i].canRead()) {
-            if (fileList[i].getName().contains("usages")) {
-              processGoogleDatasetUsageFile(flatFile);
-              //processGoogleDatasetJobEventsFile(flatFile);
+            if (fileList[i].getName().contains("task_usage")) {
+              //processGoogleDatasetUsageFile(flatFile);
+            }
+            if (fileList[i].getName().contains("job_events")) {
+              //processGoogleDatasetUsageFile(flatFile);
+              processGoogleDatasetJobEventsFile(flatFile);
             }
           }
 
@@ -93,14 +142,14 @@ public class OneFeatureGenerator {
     FlatFileReader reader = new FlatFileReader(file, ',');
 
     try {
-      File outputDir = new File("outputData/task_events");
+      File outputDir = new File("outputData/task_usage");
       if (!outputDir.exists()) {
         outputDir.mkdirs();
       }
 
       String output = file.replaceFirst("inputData", "outputData");
       FileOutputStream out = new FileOutputStream(output);
-      Map<String, String> keyMap = new HashMap<String, String>();
+      Map<String, Long> keyMap = new HashMap<String, Long>();
 
       String[] fields = reader.readRecord();
       while (fields != null) {
@@ -108,7 +157,7 @@ public class OneFeatureGenerator {
         if (fields[3] == null)
           break;
 
-        generateNewIdenticalFieldForJobEvent(fields, keyMap);
+        generateNewIdenticalFieldForUsage(fields, keyMap);
         fields = reader.readRecord();
       }
       generateOutputFile(out, keyMap);
@@ -116,6 +165,70 @@ public class OneFeatureGenerator {
     } catch (IOException e) {
       e.printStackTrace();
     }
+  }
+  
+  private static void processGoogleDatasetJobs(File[] job_events_files, File[] machine_attributes_files, File[] machine_events_files, File[] task_constraints_files, File[] task_events_files, File[] task_usage_files) throws Exception {
+    
+      int fileCount = job_events_files.length;
+      
+      FlatFileReader job_events_reader;
+      FlatFileReader machine_attributes_reader;
+      FlatFileReader machine_events_reader;
+      FlatFileReader task_constraints_reader;
+      FlatFileReader task_events_reader;
+      FlatFileReader task_usage_reader;
+      
+      for (int i = 0; i < fileCount; i++) {
+          job_events_reader = new FlatFileReader(job_events_files[i].getAbsolutePath(), ',');
+          //machine_attributes_reader = new FlatFileReader(machine_attributes_files[i].getAbsolutePath(), ',');
+          //machine_events_reader = new FlatFileReader(machine_events_files[i].getAbsolutePath(), ',');
+          //task_constraints_reader = new FlatFileReader(task_constraints_files[i].getAbsolutePath(), ',');
+          //task_events_reader = new FlatFileReader(task_events_files[i].getAbsolutePath(), ',');
+          task_usage_reader = new FlatFileReader(task_usage_files[i].getAbsolutePath(), ',');      
+      
+
+            try {
+              File outputDir = new File("outputData/job_features");
+              if (!outputDir.exists()) {
+                outputDir.mkdirs();
+              }
+
+              String output = outputDir.getAbsolutePath() + "/job_features.csv";
+              FileOutputStream out = new FileOutputStream(output);
+              Map<String, Object[]> keyMap = new LinkedHashMap<String, Object[]>();
+
+              String[] job_events_fields = job_events_reader.readRecord();
+              //String[] machine_attributes_fields = machine_attributes_reader.readRecord();
+              //String[] machine_events_fields = machine_events_reader.readRecord();
+              //String[] task_constraints_fields = task_constraints_reader.readRecord();
+              //String[] task_events_fields = task_events_reader.readRecord();
+              String[] task_usage_fields = task_usage_reader.readRecord();
+              
+              // Generate Features for Task Usage table
+              while (task_usage_fields != null) {
+                // We assume jobId is a required field
+                if (task_usage_fields[3] == null)
+                  break;
+
+                generateTaskUsageFeature(task_usage_fields, keyMap);
+                task_usage_fields = task_usage_reader.readRecord();
+              }
+              
+              // Generate Features for Job Events table
+              while (job_events_fields != null) {
+                // We assume jobId is a required field
+                if (job_events_fields[3] == null)
+                  break;
+
+                generateJobEventFeature(job_events_fields, keyMap);
+                job_events_fields = job_events_reader.readRecord();
+              }
+              generateOutputFile(out, keyMap);
+              out.close();
+            } catch (IOException e) {
+              e.printStackTrace();
+            }
+      }
   }
 
   private static void generateNewIdenticalFieldForUsage(String[] fields,  Map<String, Long> keyMap) {
@@ -135,7 +248,30 @@ public class OneFeatureGenerator {
     System.out.println("Check!");
   }
   
-  private static void generateNewIdenticalFieldForJobEvent(String[] fields,  Map<String, String> keyMap) {
+  private static void generateTaskUsageFeature(String[] fields,  Map<String, Object[]> keyMap) {
+    String startTime = fields[0], endTime = fields[1], jobId = fields[2], taskIndex = fields[3], machineId = fields[4],
+        meanCPUusageRate = fields[5], canonicalMemUsage = fields[6], assignedMemUsage = fields[7], unmapPageCacheMemUsage = fields[8], totalPageCacheMemUsage = fields[9],
+        maxMemUsage = fields[10], meanDiskIoTime = fields[11], meanLocalDiskSpaceUsed = fields[12], maxCPUUsage = fields[13], MaxDiskIoTime = fields[14], cyclesPerInst = fields[15],
+        memAccessPerInst = fields[16], samplePortion = fields[17], aggregationType = fields[18], sampleCpuUsage = fields[19];
+
+    Object[] values = keyMap.get(jobId);
+    Long jobDuration;
+    if (values == null) {
+        values = new Object[NUM_FEATURES];
+        jobDuration = Long.parseLong(endTime) - Long.parseLong(startTime);
+        values[0] = jobDuration;
+        keyMap.put(jobId, values);
+    } else if (values[0] == null) {
+        values[0] = Long.parseLong(endTime) - Long.parseLong(startTime);
+        keyMap.put(jobId, values);
+    } else {
+        jobDuration = (Long)values[0] + Long.parseLong(endTime) - Long.parseLong(startTime);
+        values[0] = jobDuration;
+        keyMap.put(jobId, values);
+    }
+  }
+  
+  private static void generateJobEventFeature(String[] fields,  Map<String, Object[]> keyMap) {
     String time = fields[0], missingInfo = fields[1], jobId = fields[2], 
             eventType = fields[3], user = fields[4], 
             schedulingClass = fields[5], jobName = fields[6], 
@@ -151,9 +287,18 @@ public class OneFeatureGenerator {
         jobStatus = "NO_FAIL";
     }
     
-    keyMap.put(jobId, jobStatus);
+    Object[] values = keyMap.get(jobId);
+    
+    if (values == null) {
+        values = new Object[NUM_FEATURES];
+        values[1] = jobStatus;
+        keyMap.put(jobId, values);
+    } else {
+        values[1] = jobStatus;
+        keyMap.put(jobId, values);  
+    }    
   }
-
+  
   private static void generateOutputFile (FileOutputStream out,  Map keyMap) {
 
     String dilimit = ", ";
@@ -163,11 +308,32 @@ public class OneFeatureGenerator {
     try {
       while (mapIt.hasNext()) {
         Map.Entry item = (Map.Entry) mapIt.next();
-        String entry = item.getKey() + dilimit + item.getValue().toString() + endLine;
+        Object[] value = (Object[])item.getValue();
+        String entry = (String)item.getKey();
+        
+        for (int i = 0; i < value.length; i++) {
+            String valueString = "";
+            if (value[i] != null) {
+                valueString = value[i].toString();
+            }
+            entry += dilimit + valueString;
+        }
+        entry += endLine;
+        
         out.write(entry.getBytes());
       }
     } catch (IOException e) {
       e.printStackTrace();
-    }
+    }    
+  }
+  
+  private static int getMinValue(int[] array) {
+      int minValue = array[0];
+      for (int i = 1; i < array.length; i++) {
+          if (array[i] < minValue) {
+              minValue = array[i];
+          }
+      }
+      return minValue;
   }
 }
