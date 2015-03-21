@@ -16,7 +16,7 @@ import java.util.logging.Logger;
  */
 public class OneFeatureGenerator {
 
-  private static final int NUM_FEATURES = 2;
+  private static final int NUM_FEATURES = 4;
   
   public static void main(String[] argv) throws Exception {
 //    if (argv.length != 3) {
@@ -183,7 +183,7 @@ public class OneFeatureGenerator {
           //machine_attributes_reader = new FlatFileReader(machine_attributes_files[i].getAbsolutePath(), ',');
           //machine_events_reader = new FlatFileReader(machine_events_files[i].getAbsolutePath(), ',');
           //task_constraints_reader = new FlatFileReader(task_constraints_files[i].getAbsolutePath(), ',');
-          //task_events_reader = new FlatFileReader(task_events_files[i].getAbsolutePath(), ',');
+          task_events_reader = new FlatFileReader(task_events_files[i].getAbsolutePath(), ',');
           task_usage_reader = new FlatFileReader(task_usage_files[i].getAbsolutePath(), ',');      
       
 
@@ -201,7 +201,7 @@ public class OneFeatureGenerator {
               //String[] machine_attributes_fields = machine_attributes_reader.readRecord();
               //String[] machine_events_fields = machine_events_reader.readRecord();
               //String[] task_constraints_fields = task_constraints_reader.readRecord();
-              //String[] task_events_fields = task_events_reader.readRecord();
+              String[] task_events_fields = task_events_reader.readRecord();
               String[] task_usage_fields = task_usage_reader.readRecord();
               
               // Generate Features for Task Usage table
@@ -222,6 +222,17 @@ public class OneFeatureGenerator {
 
                 generateJobEventFeature(job_events_fields, keyMap);
                 job_events_fields = job_events_reader.readRecord();
+              }
+              
+              
+              // Generate Features for Task Events table
+              while (task_events_fields != null) {
+                // We assume jobId is a required field
+                if (task_events_fields[3] == null)
+                  break;
+
+                generateTaskEventFeature(task_events_fields, keyMap);
+                task_events_fields = task_events_reader.readRecord();
               }
               generateOutputFile(out, keyMap);
               out.close();
@@ -295,6 +306,51 @@ public class OneFeatureGenerator {
         keyMap.put(jobId, values);
     } else {
         values[1] = jobStatus;
+        keyMap.put(jobId, values);  
+    }    
+  }
+  
+    private static void generateTaskEventFeature(String[] fields,  Map<String, Object[]> keyMap) {
+    String time = fields[0], missingInfo = fields[1], jobId = fields[2], 
+            taskIndex = fields[3], machineId = fields[4], eventType = fields[5],
+            user = fields[6], schedulingClass = fields[7], priority = fields[8],
+            cpuRequest = fields[9], memoryRequest = fields[10],
+            diskSpaceRequest = fields[11], 
+            differentMachinesRestriction = fields[12];
+    
+    final int TASK_FAIL_CODE = 3;
+    final int TASK_SCHEDULE_CODE = 1;
+    boolean taskFailStatus = false;
+    Object[] values = keyMap.get(jobId);
+    
+    if (Integer.parseInt(eventType) == TASK_FAIL_CODE) {
+        taskFailStatus = true;
+    }
+    
+    if (values == null) {
+        values = new Object[NUM_FEATURES];
+        values[2] = 0;
+        values[3] = taskFailStatus;
+        keyMap.put(jobId, values);
+    } else if (values[2] == null) {
+        values[2] = 0;
+        values[3] = taskFailStatus;
+        keyMap.put(jobId, values);
+    } else {
+        
+        if ((Boolean)values[3] == true) {
+            if (Integer.parseInt(eventType) == TASK_SCHEDULE_CODE) {
+                int numCrashLoops = (Integer)values[2];
+                numCrashLoops++;
+                values[2] = numCrashLoops;
+                values[3] = false;
+            }
+        }
+        else {
+            if (Integer.parseInt(eventType) == TASK_FAIL_CODE) {
+                values[3] = true;
+            }
+        }
         keyMap.put(jobId, values);  
     }    
   }
