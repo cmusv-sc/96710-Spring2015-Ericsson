@@ -16,7 +16,7 @@ import java.util.logging.Logger;
  */
 public class OneFeatureGenerator {
 
-  private static final int NUM_FEATURES = 4;
+  private static final int NUM_FEATURES = 5;
   
   public static void main(String[] argv) throws Exception {
 //    if (argv.length != 3) {
@@ -319,6 +319,7 @@ public class OneFeatureGenerator {
             differentMachinesRestriction = fields[12];
     
     final int TASK_FAIL_CODE = 3;
+    final int TASK_EVICT_CODE = 2;
     final int TASK_SCHEDULE_CODE = 1;
     boolean taskFailStatus = false;
     Object[] values = keyMap.get(jobId);
@@ -331,10 +332,22 @@ public class OneFeatureGenerator {
         values = new Object[NUM_FEATURES];
         values[2] = 0;
         values[3] = taskFailStatus;
+        if(Integer.parseInt(eventType) == TASK_EVICT_CODE) {
+            values[4] = 1;
+        }
+        else {
+            values[4] = 0;
+        }
         keyMap.put(jobId, values);
     } else if (values[2] == null) {
         values[2] = 0;
         values[3] = taskFailStatus;
+        if(Integer.parseInt(eventType) == TASK_EVICT_CODE) {
+            values[4] = 1;
+        }
+        else {
+            values[4] = 0;
+        }
         keyMap.put(jobId, values);
     } else {
         
@@ -350,6 +363,9 @@ public class OneFeatureGenerator {
             if (Integer.parseInt(eventType) == TASK_FAIL_CODE) {
                 values[3] = true;
             }
+        }
+        if(Integer.parseInt(eventType) == TASK_EVICT_CODE) {
+            values[4] = (Integer)values[4] + 1;
         }
         keyMap.put(jobId, values);  
     }    
