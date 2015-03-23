@@ -1,4 +1,4 @@
-package edu.cmu.sep.sls.weka;
+package weka.attributeSelection;
 
 import java.util.*;
 import weka.core.*;
