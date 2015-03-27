@@ -48,12 +48,12 @@ public class StochasticLocalSearch extends ASSearch implements OptionHandler {
             int index = RAND.nextInt(this.featureCount);
             neighbor.flip(index);
             if (!visitedStates.contains(neighbor)) {
-                break;
+            	 return neighbor;
             } else {
                 neighbor.flip(index);
             }
         }
-        return neighbor;
+        return null;
     }
 
     @Override
@@ -77,12 +77,15 @@ public class StochasticLocalSearch extends ASSearch implements OptionHandler {
                 boolean doNoiseStep = nextStep();
                 if (doNoiseStep) {
                     state = getNeighbor(state, visitedStates);
-                    goal = evaluator.evaluateSubset(state);
-                    m_debuglog.log("state = " + state.toString() + ", goal = " + goal);
-                    visitedStates.add(state);
-                    if (goal > this.maxGoal) {
-                        this.maxGoal = goal; // record performance
-                        optimalState = state; // record feature set end
+                    if (state != null)
+                    {
+                    	goal = evaluator.evaluateSubset(state);
+                    	m_debuglog.log("state = " + state.toString() + ", goal = " + goal);
+                    	visitedStates.add(state);
+                    	if (goal > this.maxGoal) {
+                    		this.maxGoal = goal; // record performance
+                    		optimalState = state; // record feature set end
+                    	}
                     }
                 } else {
                     double neighborMaxGoal = Double.NEGATIVE_INFINITY;
@@ -91,11 +94,15 @@ public class StochasticLocalSearch extends ASSearch implements OptionHandler {
                     BitSet neighborState = null;
                     for (int k = 0; k < greedyNeighbors; k++) {
                         neighborState = getNeighbor(state, visitedStates);
-                        neighborGoal = evaluator.evaluateSubset(neighborState);
-                        visitedStates.add(neighborState);
-                        if (neighborGoal > neighborMaxGoal) {
-                            neighborMaxGoal = neighborGoal; // record performance
-                            neighborOptimalState = neighborState; // record feature set end
+                        
+                        if (neighborState != null)
+                        {
+	                        neighborGoal = evaluator.evaluateSubset(neighborState);
+	                        visitedStates.add(neighborState);
+	                        if (neighborGoal > neighborMaxGoal) {
+	                            neighborMaxGoal = neighborGoal; // record performance
+	                            neighborOptimalState = neighborState; // record feature set end
+	                        }
                         }
                     }
                     state = neighborOptimalState;
