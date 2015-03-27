@@ -28,7 +28,8 @@ public class OneFeatureGenerator {
 
     //String inputFilePath = setWorkingInputFile(argv[0]);
     //String inputFilePath = setWorkingInputFile("task_usage");
-    processGoogleDatasetFiles();
+   // processGoogleDatasetFiles();
+      FeatureConstructorSingleton.getInstance().Initialize();    
   }
 
   private static void processGoogleDatasetFiles() throws Exception {

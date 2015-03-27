@@ -7,6 +7,8 @@ package edu.cmu.sep.FeatureGenerator;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 
 /**
  *
@@ -14,38 +16,23 @@ import java.util.ArrayList;
  */
 public abstract class Feature {
     
-    //public abstract void generateFeature();
+    protected final ArrayList<String> mSchema = FeatureConstructorSingleton.getInstance().getSchema(getTableName());
+    protected final ArrayList<String> mFileList = FeatureConstructorSingleton.getInstance().getFileList(getTableName());
+    protected final LinkedHashMap<String, String> mJobHash = FeatureConstructorSingleton.getInstance().getJobHash();
+       
+    public abstract String getTableName();
     
-    public abstract String[] getSchema() throws IOException;
+    public abstract void generateFeatureSingleValue(String[] tableRowArray);
     
-    public String getSchemaFile() {
-        return "inputData/schema.csv";
-    }
-    
-    public String getOutputFeaturesFile() {
-        return "outputData/job_features.csv";
-    }
-    
-    public String[] getSchema(String table) throws IOException {
-        FlatFileReader schemaReader = new FlatFileReader(getSchemaFile(), ',');
-        
-        ArrayList<String> schemaList = new ArrayList<String>();
-        
-        String[] schemaFields = schemaReader.readRecord();
-        
-        while (schemaFields != null) {
-            
-            if (schemaFields[0] == null) break;
-            
-            if(schemaFields[0].startsWith(table)) {
-                schemaList.add(schemaFields[2]);
-            }
-            schemaFields = schemaReader.readRecord();
+    public void generateFeatureAllRows() throws IOException {
+        for(String file : mFileList) {
+            FlatFileReader reader = new FlatFileReader(file, ',');
+            String[] tableRowArray;
+            do {
+                tableRowArray = reader.readRecord();
+                generateFeatureSingleValue(tableRowArray);
+            } while (tableRowArray != null);
         }
-        
-        String[] schemaArray = new String[schemaList.size()];
-        schemaArray = schemaList.toArray(schemaArray);
-        
-        return schemaArray;
+        FeatureConstructorSingleton.getInstance().clearJobHash();
     }
 }

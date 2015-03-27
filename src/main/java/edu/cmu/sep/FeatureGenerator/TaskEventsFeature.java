@@ -5,27 +5,18 @@
  */
 package edu.cmu.sep.FeatureGenerator;
 
-import java.io.File;
-import java.io.IOException;
-
 /**
  *
  * @author rohit_000
  */
-public class TaskEventsFeature extends Feature {
+public abstract class TaskEventsFeature extends Feature {
         
-    private File tableFolder;
+    private static final String TABLE_NAME = "task_events";
+    protected final int mJobIdIndex = mSchema.indexOf("job ID");
     
-    public TaskEventsFeature() {
-        this.tableFolder =  new File("inputData/task_events");
-    
-        if (!this.tableFolder.exists()) {
-            System.out.println("InputFile directory does not exist.");
-            System.exit(1);
-        }
+    public String getTableName() {
+        return TABLE_NAME;
     }
-    
-    public String[] getSchema() throws IOException {
-        return super.getSchema("task_events");
-    }
+        
+    public abstract void generateFeatureSingleValue(String[] tableRowArray);
 }

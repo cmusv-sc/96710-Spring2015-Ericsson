@@ -5,27 +5,18 @@
  */
 package edu.cmu.sep.FeatureGenerator;
 
-import java.io.File;
-import java.io.IOException;
-
 /**
  *
  * @author rohit_000
  */
-public class TaskConstraintsFeature extends Feature {
+public abstract class TaskConstraintsFeature extends Feature {
     
-    private File tableFolder;
+    private static final String TABLE_NAME = "task_constraints";
+    protected final int mJobIdIndex = mSchema.indexOf("job ID");
     
-    public TaskConstraintsFeature() {
-        this.tableFolder =  new File("inputData/task_constraints");
-    
-        if (!this.tableFolder.exists()) {
-            System.out.println("InputFile directory does not exist.");
-            System.exit(1);
-        }
+    public String getTableName() {
+        return TABLE_NAME;
     }
-    
-    public String[] getSchema() throws IOException {
-        return super.getSchema("task_constraints");
-    }
+        
+    public abstract void generateFeatureSingleValue(String[] tableRowArray);
 }

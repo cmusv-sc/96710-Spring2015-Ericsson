@@ -5,27 +5,17 @@
  */
 package edu.cmu.sep.FeatureGenerator;
 
-import java.io.File;
-import java.io.IOException;
-
 /**
  *
  * @author rohit_000
  */
 public abstract class MachineAttributesFeature extends Feature{
     
-    private File tableFolder;
+    private static final String TABLE_NAME = "machine_attributes";
     
-    public MachineAttributesFeature() {
-        this.tableFolder =  new File("inputData/machine_attributes");
-    
-        if (!this.tableFolder.exists()) {
-            System.out.println("InputFile directory does not exist.");
-            System.exit(1);
-        }
+    public String getTableName() {
+        return TABLE_NAME;
     }
-    
-    public String[] getSchema() throws IOException {
-        return super.getSchema("machine_attributes");
-    }    
+        
+    public abstract void generateFeatureSingleValue(String[] tableRowArray); 
 }
