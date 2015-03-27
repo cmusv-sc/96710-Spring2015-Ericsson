@@ -1,6 +1,7 @@
 package weka.attributeSelection;
 
 import java.util.*;
+
 import weka.core.*;
 import weka.attributeSelection.*;
 
@@ -18,9 +19,12 @@ public class StochasticLocalSearch extends ASSearch implements OptionHandler {
 
     protected int featureCount;
     protected double maxGoal;
+    
+    protected Debug.SimpleLog m_debuglog;
 
     public StochasticLocalSearch() {
         this.resetOptions();
+        m_debuglog = new Debug.SimpleLog();
     }
 
     protected void resetOptions() {
@@ -57,23 +61,24 @@ public class StochasticLocalSearch extends ASSearch implements OptionHandler {
         this.featureCount = data.numAttributes() - 1;
         SubsetEvaluator evaluator = (SubsetEvaluator) asEvaluator;
 
-        maxGoal = Double.NEGATIVE_INFINITY; // performance score record while t ≤ MAX-TRIES do
+        maxGoal = Double.NEGATIVE_INFINITY; // performance score record while t â‰¤ MAX-TRIES do
         BitSet optimalState = null;
 
         for (int t = 0; t < this.maxTries; t++) {
             Set<BitSet> visitedStates = new HashSet<BitSet>();
             BitSet state = this.generateInitialState();
-            double goal = evaluator.evaluateSubset(state) ; // calculate performance if g ≥ g∗ then
+            double goal = evaluator.evaluateSubset(state) ; // calculate performance if g â‰¥ gâˆ— then
             if (goal > this.maxGoal) {
                 this.maxGoal = goal; // record performance
                 optimalState = state; // record feature set end
             }
-            visitedStates.add(state);// add to taboo list r ← 1;
+            visitedStates.add(state);// add to taboo list r â†� 1;
             for (int r = 0; r < this.maxFlips; r++) {
                 boolean doNoiseStep = nextStep();
                 if (doNoiseStep) {
                     state = getNeighbor(state, visitedStates);
                     goal = evaluator.evaluateSubset(state);
+                    m_debuglog.log("state = " + state.toString() + ", goal = " + goal);
                     visitedStates.add(state);
                     if (goal > this.maxGoal) {
                         this.maxGoal = goal; // record performance
@@ -94,6 +99,7 @@ public class StochasticLocalSearch extends ASSearch implements OptionHandler {
                         }
                     }
                     state = neighborOptimalState;
+                    m_debuglog.log("state = " + state.toString() + ", goal = " + neighborMaxGoal);
                     if (neighborMaxGoal > this.maxGoal) {
                         this.maxGoal = neighborMaxGoal;
                         optimalState = neighborOptimalState;
@@ -169,7 +175,7 @@ public class StochasticLocalSearch extends ASSearch implements OptionHandler {
 
         optionString = Utils.getOption('N', options);
         if (optionString.length() != 0) {
-            this.noise = Integer.parseInt(optionString);
+            this.noise = Float.parseFloat(optionString);
         }
     }
 
