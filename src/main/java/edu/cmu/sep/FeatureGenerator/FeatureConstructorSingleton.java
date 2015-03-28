@@ -6,15 +6,15 @@
 package edu.cmu.sep.FeatureGenerator;
 
 import java.io.File;
-import java.io.FileNotFoundException;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import static java.lang.System.out;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.nio.file.Files;
+import java.util.Arrays;
 
 /**
  *
@@ -173,14 +173,48 @@ public class FeatureConstructorSingleton {
             String endLine = "\n";
             for (Map.Entry<String, String> entry : mJobHash.entrySet()) {
                 String lineToWrite = entry.getKey() + endLine;
-                try {
-                    outputStream.write(lineToWrite.getBytes());
-                } catch(IOException e) {
-                    e.printStackTrace();
-                    System.exit(1);
-                }
+                outputStream.write(lineToWrite.getBytes());
             }
             outputStream.close();
+        } catch(Exception e) {
+            e.printStackTrace();
+            System.exit(1);
+        }
+    }
+    
+    public void updateOutputFile() {
+        File outputFeaturesFile = new File(getOutputFeaturesFile());
+        if(!outputFeaturesFile.isFile()) {
+            System.exit(1);
+        }
+        File tempFile = new File(getOutputDir() + "/temp.csv");
+        if(tempFile.isFile()) {
+            try {
+                Files.delete(tempFile.toPath());
+            } catch (IOException e) {
+                e.printStackTrace();
+                System.exit(1);
+            }
+        }
+        
+        try {
+            FileOutputStream outputStream = new FileOutputStream(tempFile);
+            FlatFileReader inputReader = new FlatFileReader(outputFeaturesFile.getAbsolutePath(), ',');
+            String endLine = "\n";
+            for (Map.Entry<String, String> entry : mJobHash.entrySet()) {
+                String lineToWrite = "";
+                for(String feature : inputReader.readRecord()) {
+                    if(feature == null) break;
+                    lineToWrite += feature + ',';
+                }
+                lineToWrite += entry.getValue() + endLine;
+                outputStream.write(lineToWrite.getBytes());
+            }
+            inputReader.close();
+            outputStream.close();
+            Files.delete(outputFeaturesFile.toPath());
+            Files.copy(tempFile.toPath(), outputFeaturesFile.toPath());
+            Files.delete(tempFile.toPath());
         } catch(Exception e) {
             e.printStackTrace();
             System.exit(1);

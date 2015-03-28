@@ -30,9 +30,11 @@ public abstract class Feature {
             String[] tableRowArray;
             do {
                 tableRowArray = reader.readRecord();
+                if(tableRowArray[0] == null) break;
                 generateFeatureSingleValue(tableRowArray);
             } while (tableRowArray != null);
         }
+        FeatureConstructorSingleton.getInstance().updateOutputFile();
         FeatureConstructorSingleton.getInstance().clearJobHash();
     }
 }

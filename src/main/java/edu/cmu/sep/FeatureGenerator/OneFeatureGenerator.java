@@ -29,7 +29,15 @@ public class OneFeatureGenerator {
     //String inputFilePath = setWorkingInputFile(argv[0]);
     //String inputFilePath = setWorkingInputFile("task_usage");
    // processGoogleDatasetFiles();
-      FeatureConstructorSingleton.getInstance().Initialize();    
+      FeatureConstructorSingleton.getInstance().Initialize();
+      
+      //Create job duration feature
+      JobDurationFeature jobDurationFeature = new JobDurationFeature();
+      jobDurationFeature.generateFeatureAllRows();
+      
+      // Create job fail feature
+      JobFailFeature jobFailFeature = new JobFailFeature();
+      jobFailFeature.generateFeatureAllRows();
   }
 
   private static void processGoogleDatasetFiles() throws Exception {

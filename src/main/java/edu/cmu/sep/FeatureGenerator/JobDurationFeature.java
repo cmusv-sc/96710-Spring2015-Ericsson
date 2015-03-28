@@ -20,6 +20,9 @@ public class JobDurationFeature extends TaskUsageFeature {
         String jobId = tableRowArray[mJobIdIndex];
         String startTime = tableRowArray[mSchema.indexOf("start time")];
         String endTime = tableRowArray[mSchema.indexOf("end time")];
+        if(!mJobHash.containsKey(jobId)) {
+            return;
+        }
         String value = mJobHash.get(jobId);
         if (value == null) {
             mJobHash.put(jobId, Long.toString(Long.parseLong(endTime) - Long.parseLong(startTime)));
