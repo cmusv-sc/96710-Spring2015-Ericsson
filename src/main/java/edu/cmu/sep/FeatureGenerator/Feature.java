@@ -18,7 +18,7 @@ public abstract class Feature {
     
     protected final ArrayList<String> mSchema = FeatureConstructorSingleton.getInstance().getSchema(getTableName());
     protected final ArrayList<String> mFileList = FeatureConstructorSingleton.getInstance().getFileList(getTableName());
-    protected final LinkedHashMap<String, String> mJobHash = FeatureConstructorSingleton.getInstance().getJobHash();
+    protected final LinkedHashMap<String, ArrayList<String>> mJobHash = FeatureConstructorSingleton.getInstance().getJobHash();
        
     public abstract String getTableName();
     

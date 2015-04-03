@@ -23,11 +23,17 @@ public class JobDurationFeature extends TaskUsageFeature {
         if(!mJobHash.containsKey(jobId)) {
             return;
         }
-        String value = mJobHash.get(jobId);
+        ArrayList<String> value = mJobHash.get(jobId);
         if (value == null) {
-            mJobHash.put(jobId, Long.toString(Long.parseLong(endTime) - Long.parseLong(startTime)));
+          value = new ArrayList<String>();
+          String jobDuaration = Long.toString(Long.parseLong(endTime) - Long.parseLong(startTime));
+          value.add(jobDuaration);
+          mJobHash.put(jobId, value);
         } else {
-            mJobHash.put(jobId, Long.toString(Long.parseLong(value) + Long.parseLong(endTime) - Long.parseLong(startTime)));
+          String jobDuaration = Long.toString(Long.parseLong(value.get(0)) + Long.parseLong(endTime) - Long.parseLong(startTime));
+          value.remove(0);
+          value.add(jobDuaration);
+          mJobHash.put(jobId, value);
         }
     }
     

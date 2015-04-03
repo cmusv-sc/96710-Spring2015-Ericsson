@@ -5,6 +5,8 @@
  */
 package edu.cmu.sep.FeatureGenerator;
 
+import java.util.ArrayList;
+
 /**
  *
  * @author rohit_000
@@ -23,8 +25,15 @@ public class JobFailFeature extends JobEventsFeature{
         if(Integer.parseInt(eventType) == 3) {
             status = "FAIL";
         }
-        mJobHash.put(jobId, status);
-        
+      ArrayList<String> value = mJobHash.get(jobId);
+      if (value == null) {
+        value = new ArrayList<String>();
+        value.add(status);
+      } else {
+        value.remove(0);
+        value.add(status);
+      }
+        mJobHash.put(jobId, value);
     }
     
 }

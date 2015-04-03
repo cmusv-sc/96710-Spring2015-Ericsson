@@ -20,7 +20,7 @@ public class OneFeatureGenerator {
   
   public static void main(String[] argv) throws Exception {
 //    if (argv.length != 3) {
-//      System.out.println("Usage: java -classpath DatabasePatch.jar OneFeatureGenerator [task_usage] [2] [3]");
+//      System.out.println("Usage: java -classpath FeatureGenerator.jar OneFeatureGenerator [task_usage] [2] [3]");
 //      return;
 //    }
 
@@ -38,6 +38,37 @@ public class OneFeatureGenerator {
       // Create job fail feature
       JobFailFeature jobFailFeature = new JobFailFeature();
       jobFailFeature.generateFeatureAllRows();
+
+    CpuRateFeatures cpuRateFeatures = new CpuRateFeatures();
+    cpuRateFeatures.generateFeatureAllRows();
+
+    CanonicalMemUsage canonicalMemUsage = new CanonicalMemUsage();
+    canonicalMemUsage.generateFeatureAllRows();
+
+    AssignedMemUsage assignedMemUsage = new AssignedMemUsage();
+    assignedMemUsage.generateFeatureAllRows();
+
+    UnmappedPageCache unmappedPageCache = new UnmappedPageCache();
+    unmappedPageCache.generateFeatureAllRows();
+
+    TotalPageCache totalPageCache = new TotalPageCache();
+    totalPageCache.generateFeatureAllRows();
+
+    MaxMemUsage maxMemUsage = new MaxMemUsage();
+    maxMemUsage.generateFeatureAllRows();
+
+    DiskIOTime diskIOTime = new DiskIOTime();
+    diskIOTime.generateFeatureAllRows();
+
+    LocalDiskSpaceUsage localDiskSpaceUsage = new LocalDiskSpaceUsage();
+    localDiskSpaceUsage.generateFeatureAllRows();
+
+    MaxCPURate maxCPURate = new MaxCPURate();
+    maxCPURate.generateFeatureAllRows();
+
+    MaxDiskIOTime maxDiskIOTime = new MaxDiskIOTime();
+    maxDiskIOTime.generateFeatureAllRows();
+
   }
 
   private static void processGoogleDatasetFiles() throws Exception {
