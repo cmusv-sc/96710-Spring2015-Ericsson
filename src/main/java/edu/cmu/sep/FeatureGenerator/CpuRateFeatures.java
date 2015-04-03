@@ -1,7 +1,5 @@
 package edu.cmu.sep.FeatureGenerator;
 
-import sun.plugin2.gluegen.runtime.CPU;
-
 import java.util.ArrayList;
 
 /**

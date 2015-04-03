@@ -38,7 +38,10 @@ public class OneFeatureGenerator {
       // Create job fail feature
       JobFailFeature jobFailFeature = new JobFailFeature();
       jobFailFeature.generateFeatureAllRows();
-
+      
+      TaskEvictionsFeature taskEvictionFeature = new TaskEvictionsFeature();
+      taskEvictionFeature.generateFeatureAllRows();
+      
     CpuRateFeatures cpuRateFeatures = new CpuRateFeatures();
     cpuRateFeatures.generateFeatureAllRows();
 
@@ -68,7 +71,7 @@ public class OneFeatureGenerator {
 
     MaxDiskIOTime maxDiskIOTime = new MaxDiskIOTime();
     maxDiskIOTime.generateFeatureAllRows();
-
+    
   }
 
   private static void processGoogleDatasetFiles() throws Exception {
