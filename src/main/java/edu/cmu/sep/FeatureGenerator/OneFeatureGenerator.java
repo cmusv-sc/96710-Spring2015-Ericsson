@@ -42,6 +42,9 @@ public class OneFeatureGenerator {
       TaskEvictionsFeature taskEvictionFeature = new TaskEvictionsFeature();
       taskEvictionFeature.generateFeatureAllRows();
       
+      CrashFailLoopsFeature crashFailLoopsFeature = new CrashFailLoopsFeature();
+      crashFailLoopsFeature.generateFeatureAllRows();
+      
     CpuRateFeatures cpuRateFeatures = new CpuRateFeatures();
     cpuRateFeatures.generateFeatureAllRows();
 
