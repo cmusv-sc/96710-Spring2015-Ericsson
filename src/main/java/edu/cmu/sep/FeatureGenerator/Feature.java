@@ -24,6 +24,9 @@ public abstract class Feature {
     public abstract void generateFeatureSingleValue(String[] tableRowArray);
     
     public void generateFeatureAllRows() throws IOException {
+        // Add feature to schema
+        FeatureConstructorSingleton.getInstance().addFeatureToSchema(this.getClass().getSimpleName());
+        
         for(String file : mFileList) {
             FlatFileReader reader = new FlatFileReader(file, ',');
             String[] tableRowArray;

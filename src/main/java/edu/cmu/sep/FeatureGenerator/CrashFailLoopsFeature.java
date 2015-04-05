@@ -14,11 +14,7 @@ import java.util.Map;
  * @author rohit_000
  */
 public class CrashFailLoopsFeature extends TaskEventsFeature {
-    
-  public CrashFailLoopsFeature() {
-            
-  }  
-    
+       
   public void generateFeatureSingleValue(String[] tableRowArray) {
 
     String jobId = tableRowArray[mJobIdIndex];
@@ -55,6 +51,7 @@ public class CrashFailLoopsFeature extends TaskEventsFeature {
         mJobHash.put(jobId, value);
   }
   
+  @Override
   public void generateFeatureAllRows() throws IOException {
     for(String file : mFileList) {
         FlatFileReader reader = new FlatFileReader(file, ',');

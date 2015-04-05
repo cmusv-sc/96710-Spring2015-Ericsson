@@ -23,6 +23,7 @@ public class FeatureConstructorSingleton {
     private HashMap<String, ArrayList<String>> mSchemaHash;
     private HashMap<String, ArrayList<String>> mFileListHash;
     private LinkedHashMap<String, ArrayList<String>> mJobHash;
+    private ArrayList<String> mGeneratedFeaturesSchema = new ArrayList<String>();
     
     private FeatureConstructorSingleton() {}
     
@@ -38,8 +39,9 @@ public class FeatureConstructorSingleton {
         generateSchemaHash();
         generateFileListHash();
         generateJobHash(); // Jacob: Not quite understand what is this for?
-        
         initializeOutputFile();
+        
+        addFeatureToSchema("job ID");
     }
     
     private String getDatasetRoot() {
@@ -136,7 +138,14 @@ public class FeatureConstructorSingleton {
     }
     
     public final ArrayList<String> getFileList(String table) {
-        return mFileListHash.get(table);
+        if(mFileListHash.containsKey(table))
+            return mFileListHash.get(table);
+        else {
+            ArrayList<String> retVal = new ArrayList<String>();
+            retVal.add(getOutputFeaturesFile());
+            return retVal;
+        }
+        
     }
     
     private void generateJobHash() {
@@ -249,5 +258,13 @@ public class FeatureConstructorSingleton {
             e.printStackTrace();
             System.exit(1);
         }
+    }
+    
+    public void addFeatureToSchema(String feature) {
+        mGeneratedFeaturesSchema.add(feature);
+    }
+    
+    public ArrayList<String> getGeneratedFeaturesSchema() {
+        return mGeneratedFeaturesSchema;
     }
 }
