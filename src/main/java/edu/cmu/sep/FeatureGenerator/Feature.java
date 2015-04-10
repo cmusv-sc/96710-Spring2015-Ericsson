@@ -7,7 +7,6 @@ package edu.cmu.sep.FeatureGenerator;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 
 /**
@@ -18,13 +17,16 @@ public abstract class Feature {
     
     protected final ArrayList<String> mSchema = FeatureConstructorSingleton.getInstance().getSchema(getTableName());
     protected final ArrayList<String> mFileList = FeatureConstructorSingleton.getInstance().getFileList(getTableName());
-    protected final LinkedHashMap<String, String> mJobHash = FeatureConstructorSingleton.getInstance().getJobHash();
+    protected final LinkedHashMap<String, ArrayList<String>> mJobHash = FeatureConstructorSingleton.getInstance().getJobHash();
        
     public abstract String getTableName();
     
     public abstract void generateFeatureSingleValue(String[] tableRowArray);
     
     public void generateFeatureAllRows() throws IOException {
+        // Add feature to schema
+        FeatureConstructorSingleton.getInstance().addFeatureToSchema(this.getClass().getSimpleName());
+        
         for(String file : mFileList) {
             FlatFileReader reader = new FlatFileReader(file, ',');
             String[] tableRowArray;
