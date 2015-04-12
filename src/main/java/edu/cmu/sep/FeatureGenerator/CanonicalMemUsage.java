@@ -10,7 +10,7 @@ public class CanonicalMemUsage extends TaskUsageFeature {
   public void generateFeatureSingleValue(String[] tableRowArray) {
 
     String jobId = tableRowArray[mJobIdIndex];
-    String canonicalMemUsage = tableRowArray[mSchema.indexOf("canonical memory usage")];
+    String canonicalMemUsage = tableRowArray[mTableSchema.indexOf("canonical memory usage")];
     if (canonicalMemUsage == null || !mJobHash.containsKey(jobId)) {
       return;
     }

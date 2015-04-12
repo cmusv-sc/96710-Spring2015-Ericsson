@@ -16,7 +16,7 @@ public class JobFailFeature extends JobEventsFeature{
     public void generateFeatureSingleValue(String[] tableRowArray) {
         
         String jobId = tableRowArray[mJobIdIndex];
-        String eventType = tableRowArray[mSchema.indexOf("event type")];
+        String eventType = tableRowArray[mTableSchema.indexOf("event type")];
     
         if(!mJobHash.containsKey(jobId)) {
             return;
@@ -36,4 +36,7 @@ public class JobFailFeature extends JobEventsFeature{
         mJobHash.put(jobId, value);
     }
     
+    protected void addFeatureToSchema() {
+        addFeatureToSchema("job_fails");
+    }
 }

@@ -18,7 +18,7 @@ public class CrashFailLoopsFeature extends TaskEventsFeature {
   public void generateFeatureSingleValue(String[] tableRowArray) {
 
     String jobId = tableRowArray[mJobIdIndex];
-    String eventType = tableRowArray[mSchema.indexOf("event type")];
+    String eventType = tableRowArray[mTableSchema.indexOf("event type")];
     if (eventType == null || !mJobHash.containsKey(jobId)) {
       return;
     }
@@ -74,7 +74,12 @@ public class CrashFailLoopsFeature extends TaskEventsFeature {
 
     }
     
-    FeatureConstructorSingleton.getInstance().updateOutputFile();
+    FeatureConstructorSingleton.getInstance().updateOutputFile(mFeatureSchema);
     FeatureConstructorSingleton.getInstance().clearJobHash();
+    
+  }
+  
+  protected void addFeatureToSchema() {
+      FeatureConstructorSingleton.getInstance().addFeatureToSchema("crash_fail_loops");
   }
 }

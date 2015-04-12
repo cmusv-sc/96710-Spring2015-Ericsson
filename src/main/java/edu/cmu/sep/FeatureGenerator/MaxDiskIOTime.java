@@ -10,7 +10,7 @@ public class MaxDiskIOTime extends TaskUsageFeature {
   public void generateFeatureSingleValue(String[] tableRowArray) {
 
     String jobId = tableRowArray[mJobIdIndex];
-    String maxDiskIOTime = tableRowArray[mSchema.indexOf("maximum disk IO time")];
+    String maxDiskIOTime = tableRowArray[mTableSchema.indexOf("maximum disk IO time")];
     if (maxDiskIOTime == null || maxDiskIOTime.equals("") || !mJobHash.containsKey(jobId)) {
       return;
     }

@@ -15,17 +15,25 @@ import java.util.LinkedHashMap;
  */
 public abstract class Feature {
     
-    protected final ArrayList<String> mSchema = FeatureConstructorSingleton.getInstance().getSchema(getTableName());
+    protected final ArrayList<String> mTableSchema = FeatureConstructorSingleton.getInstance().getSchema(getTableName());
     protected final ArrayList<String> mFileList = FeatureConstructorSingleton.getInstance().getFileList(getTableName());
+    protected ArrayList<String> mFeatureSchema = new ArrayList<String>();
     protected final LinkedHashMap<String, ArrayList<String>> mJobHash = FeatureConstructorSingleton.getInstance().getJobHash();
        
     public abstract String getTableName();
     
     public abstract void generateFeatureSingleValue(String[] tableRowArray);
     
+    protected abstract void addFeatureToSchema();
+    
+    protected void addFeatureToSchema(String feature) {
+        mFeatureSchema.add(feature);
+        FeatureConstructorSingleton.getInstance().addFeatureToSchema(feature);
+    }
+    
     public void generateFeatureAllRows() throws IOException {
         // Add feature to schema
-        FeatureConstructorSingleton.getInstance().addFeatureToSchema(this.getClass().getSimpleName());
+        addFeatureToSchema();
         
         for(String file : mFileList) {
             FlatFileReader reader = new FlatFileReader(file, ',');
@@ -36,7 +44,7 @@ public abstract class Feature {
                 generateFeatureSingleValue(tableRowArray);
             } while (tableRowArray != null);
         }
-        FeatureConstructorSingleton.getInstance().updateOutputFile();
+        FeatureConstructorSingleton.getInstance().updateOutputFile(mFeatureSchema);
         FeatureConstructorSingleton.getInstance().clearJobHash();
     }
 }

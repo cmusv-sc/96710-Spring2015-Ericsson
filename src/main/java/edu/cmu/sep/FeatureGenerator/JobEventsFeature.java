@@ -14,7 +14,7 @@ import java.util.ArrayList;
 public class JobEventsFeature extends Feature {
     
     private static final String TABLE_NAME = "job_events";
-    protected final int mJobIdIndex = mSchema.indexOf("job ID");
+    protected final int mJobIdIndex = mTableSchema.indexOf("job ID");
     
     public String getTableName() {
         return TABLE_NAME;
@@ -22,7 +22,7 @@ public class JobEventsFeature extends Feature {
         
     public void generateFeatureSingleValue(String[] tableRowArray) {
       String jobId = tableRowArray[mJobIdIndex];
-      String eventType = tableRowArray[mSchema.indexOf("event type")];
+      String eventType = tableRowArray[mTableSchema.indexOf("event type")];
 
       if(!mJobHash.containsKey(jobId)) {
         return;
@@ -39,5 +39,9 @@ public class JobEventsFeature extends Feature {
         value.set(0, status);
       }
       mJobHash.put(jobId, value);
+    }
+    
+    protected void addFeatureToSchema() {
+        addFeatureToSchema("job_fails");
     }
 }

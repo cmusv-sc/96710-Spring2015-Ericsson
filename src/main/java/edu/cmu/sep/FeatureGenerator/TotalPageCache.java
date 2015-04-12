@@ -10,7 +10,7 @@ public class TotalPageCache extends TaskUsageFeature {
   public void generateFeatureSingleValue(String[] tableRowArray) {
 
     String jobId = tableRowArray[mJobIdIndex];
-    String totalPageCache = tableRowArray[mSchema.indexOf("total page cache")];
+    String totalPageCache = tableRowArray[mTableSchema.indexOf("total page cache")];
     if (totalPageCache == null || !mJobHash.containsKey(jobId)) {
       return;
     }

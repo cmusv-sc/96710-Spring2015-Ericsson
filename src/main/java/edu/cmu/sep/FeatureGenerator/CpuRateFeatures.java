@@ -10,7 +10,7 @@ public class CpuRateFeatures extends TaskUsageFeature {
   public void generateFeatureSingleValue(String[] tableRowArray) {
 
     String jobId = tableRowArray[mJobIdIndex];
-    String cpuRate = tableRowArray[mSchema.indexOf("CPU rate")];
+    String cpuRate = tableRowArray[mTableSchema.indexOf("CPU rate")];
     if( cpuRate == null || !mJobHash.containsKey(jobId)) {
       return;
     }

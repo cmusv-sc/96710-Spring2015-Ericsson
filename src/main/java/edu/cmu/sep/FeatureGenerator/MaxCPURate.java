@@ -10,7 +10,7 @@ public class MaxCPURate extends TaskUsageFeature {
   public void generateFeatureSingleValue(String[] tableRowArray) {
 
     String jobId = tableRowArray[mJobIdIndex];
-    String maxCPURate = tableRowArray[mSchema.indexOf("maximum CPU rate")];
+    String maxCPURate = tableRowArray[mTableSchema.indexOf("maximum CPU rate")];
     if (maxCPURate == null || !mJobHash.containsKey(jobId)) {
       return;
     }

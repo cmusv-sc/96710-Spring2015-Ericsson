@@ -38,6 +38,9 @@ public class OneFeatureGenerator {
     //Create job duration feature
     TaskUsageFeature taskUsageFeature = new TaskUsageFeature();
     taskUsageFeature.generateFeatureAllRows();
+    
+    CombinedFeature combinedFeature = new CombinedFeature();
+    combinedFeature.generateFeatureAllRows();
 //      JobDurationFeature jobDurationFeature = new JobDurationFeature();
 //      jobDurationFeature.generateFeatureAllRows();
 

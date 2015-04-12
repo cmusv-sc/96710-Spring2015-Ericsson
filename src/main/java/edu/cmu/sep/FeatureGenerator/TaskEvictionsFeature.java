@@ -1,3 +1,4 @@
+
 /*
  * To change this license header, choose License Headers in Project Properties.
  * To change this template file, choose Tools | Templates
@@ -16,7 +17,7 @@ public class TaskEvictionsFeature extends TaskEventsFeature {
   public void generateFeatureSingleValue(String[] tableRowArray) {
 
     String jobId = tableRowArray[mJobIdIndex];
-    String eventType = tableRowArray[mSchema.indexOf("event type")];
+    String eventType = tableRowArray[mTableSchema.indexOf("event type")];
     if (eventType == null || !mJobHash.containsKey(jobId)) {
       return;
     }
@@ -42,5 +43,9 @@ public class TaskEvictionsFeature extends TaskEventsFeature {
       }
         mJobHash.put(jobId, value);
     }
+  
+  protected void addFeatureToSchema() {
+      FeatureConstructorSingleton.getInstance().addFeatureToSchema("task_evictions");
+  }
 }
    

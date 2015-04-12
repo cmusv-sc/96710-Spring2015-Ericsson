@@ -10,7 +10,7 @@ public class UnmappedPageCache extends TaskUsageFeature {
   public void generateFeatureSingleValue(String[] tableRowArray) {
 
     String jobId = tableRowArray[mJobIdIndex];
-    String unmappedMemUsage = tableRowArray[mSchema.indexOf("unmapped page cache")];
+    String unmappedMemUsage = tableRowArray[mTableSchema.indexOf("unmapped page cache")];
     if (unmappedMemUsage == null || !mJobHash.containsKey(jobId)) {
       return;
     }

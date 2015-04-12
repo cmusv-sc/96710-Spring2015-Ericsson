@@ -10,7 +10,7 @@ public class AssignedMemUsage extends TaskUsageFeature {
   public void generateFeatureSingleValue(String[] tableRowArray) {
 
     String jobId = tableRowArray[mJobIdIndex];
-    String assignedMemUsage = tableRowArray[mSchema.indexOf("assigned memory usage")];
+    String assignedMemUsage = tableRowArray[mTableSchema.indexOf("assigned memory usage")];
     if (assignedMemUsage == null || !mJobHash.containsKey(jobId)) {
       return;
     }

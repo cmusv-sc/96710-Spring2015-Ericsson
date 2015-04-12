@@ -188,6 +188,8 @@ public class FeatureConstructorSingleton {
         try {
             FileOutputStream outputStream = new FileOutputStream(getOutputFeaturesFile());
             String endLine = "\n";
+            String header = "job_id" + endLine;
+            outputStream.write(header.getBytes());
             for (Map.Entry<String, ArrayList<String>> entry : mJobHash.entrySet()) {
                 String lineToWrite = entry.getKey() + endLine;
                 outputStream.write(lineToWrite.getBytes());
@@ -199,7 +201,7 @@ public class FeatureConstructorSingleton {
         }
     }
     
-    public void updateOutputFile() {
+    public void updateOutputFile(ArrayList<String> featureSchema) {
         File outputFeaturesFile = new File(getOutputFeaturesFile());
         if(!outputFeaturesFile.isFile()) {
             System.exit(1);
@@ -218,6 +220,17 @@ public class FeatureConstructorSingleton {
             FileOutputStream outputStream = new FileOutputStream(tempFile);
             FlatFileReader inputReader = new FlatFileReader(outputFeaturesFile.getAbsolutePath(), ',');
             String endLine = "\n";
+            String headers = "";
+            String[] inputHeaders = inputReader.readRecord();
+            for(String header : inputHeaders) {
+                if(header == null) break;
+                headers += header + ",";
+            }
+             for(String header : featureSchema) {
+                headers +=  header + ",";
+            }
+            headers = headers.substring(0, headers.length() - 2) + endLine;
+            outputStream.write(headers.getBytes());
             for (Map.Entry<String, ArrayList<String>> entry : mJobHash.entrySet()) {
                 String lineToWrite = "";
                 for(String feature : inputReader.readRecord()) {
@@ -244,7 +257,7 @@ public class FeatureConstructorSingleton {
                 }
                 lineToWrite = lineToWrite.substring(0, lineToWrite.length() - 2) + endLine;
               } else {
-                lineToWrite = lineToWrite + endLine;
+                lineToWrite = lineToWrite + "," + endLine;
               }
 
                 outputStream.write(lineToWrite.getBytes());

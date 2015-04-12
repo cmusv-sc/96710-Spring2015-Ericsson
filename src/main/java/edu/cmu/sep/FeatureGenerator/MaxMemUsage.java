@@ -10,7 +10,7 @@ public class MaxMemUsage extends TaskUsageFeature {
   public void generateFeatureSingleValue(String[] tableRowArray) {
 
     String jobId = tableRowArray[mJobIdIndex];
-    String maxMemUsage = tableRowArray[mSchema.indexOf("maximum memory usage")];
+    String maxMemUsage = tableRowArray[mTableSchema.indexOf("maximum memory usage")];
     if (maxMemUsage == null || !mJobHash.containsKey(jobId)) {
       return;
     }

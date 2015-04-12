@@ -14,7 +14,7 @@ import java.util.ArrayList;
 public class TaskUsageFeature extends Feature {
     
     private static final String TABLE_NAME = "task_usage";
-    protected final int mJobIdIndex = mSchema.indexOf("job ID");
+    protected final int mJobIdIndex = mTableSchema.indexOf("job ID");
     
     public String getTableName() {
         return TABLE_NAME;
@@ -23,18 +23,18 @@ public class TaskUsageFeature extends Feature {
     public void generateFeatureSingleValue(String[] tableRowArray) {
       String jobId = tableRowArray[mJobIdIndex];
 
-      String startTime = tableRowArray[mSchema.indexOf("start time")];
-      String endTime = tableRowArray[mSchema.indexOf("end time")];
-      String cpuRate = tableRowArray[mSchema.indexOf("CPU rate")];
-      String canonicalMemUsage = tableRowArray[mSchema.indexOf("canonical memory usage")];
-      String assignedMemUsage = tableRowArray[mSchema.indexOf("assigned memory usage")];
-      String unmappedMemUsage = tableRowArray[mSchema.indexOf("unmapped page cache")];
-      String totalPageCache = tableRowArray[mSchema.indexOf("total page cache")];
-      String maxMemUsage = tableRowArray[mSchema.indexOf("maximum memory usage")];
-      String diskIOTime = tableRowArray[mSchema.indexOf("disk I/O time")];
-      String localDiskSpaceUsage = tableRowArray[mSchema.indexOf("local disk space usage")];
-      String maxCPURate = tableRowArray[mSchema.indexOf("maximum CPU rate")];
-      String maxDiskIOTime = tableRowArray[mSchema.indexOf("maximum disk IO time")];
+      String startTime = tableRowArray[mTableSchema.indexOf("start time")];
+      String endTime = tableRowArray[mTableSchema.indexOf("end time")];
+      String cpuRate = tableRowArray[mTableSchema.indexOf("CPU rate")];
+      String canonicalMemUsage = tableRowArray[mTableSchema.indexOf("canonical memory usage")];
+      String assignedMemUsage = tableRowArray[mTableSchema.indexOf("assigned memory usage")];
+      String unmappedMemUsage = tableRowArray[mTableSchema.indexOf("unmapped page cache")];
+      String totalPageCache = tableRowArray[mTableSchema.indexOf("total page cache")];
+      String maxMemUsage = tableRowArray[mTableSchema.indexOf("maximum memory usage")];
+      String diskIOTime = tableRowArray[mTableSchema.indexOf("disk I/O time")];
+      String localDiskSpaceUsage = tableRowArray[mTableSchema.indexOf("local disk space usage")];
+      String maxCPURate = tableRowArray[mTableSchema.indexOf("maximum CPU rate")];
+      String maxDiskIOTime = tableRowArray[mTableSchema.indexOf("maximum disk IO time")];
 
       if(!mJobHash.containsKey(jobId)) {
         return;
@@ -301,5 +301,39 @@ public class TaskUsageFeature extends Feature {
 
       mJobHash.put(jobId, values);
 
+    }
+    //Job ID, Job Fail, Job Duration, Min CPU rate, Max CPU rate, Avg CPU rate, Min canonical memory usage, Max canonical memory usage, Avg canonical memory usage, Min assigned memory usage, Max assigned memory usage, Avg assigned memory usage, Min unmapped page cache, Max unmapped page cache, Avg unmapped page cache, Min total page cache, Max total page cache, Avg total page cache, Min maximum memory usage, Max maximum memory usage, Avg maximum memory usage, Min disk I/O time, Max disk I/O time, Avg disk I/O time, Min local disk space usage, Max local disk space usage, Avg local disk space usage, Min maximum CPU rate, Max maximum CPU rate, Avg maximum CPU rate, Min maximum disk IO time, Max maximum disk IO time, Avg maximum disk IO time
+    protected void addFeatureToSchema() {
+        addFeatureToSchema("job_duration");
+        addFeatureToSchema("min_cpu_rate");
+        addFeatureToSchema("max_cpu_rate");
+        addFeatureToSchema("avg_cpu_rate");
+        addFeatureToSchema("min_canonical_memory_usage");
+        addFeatureToSchema("max_canonical_memory_usage");
+        addFeatureToSchema("avg_canonical_memory_usage");
+        addFeatureToSchema("min_assigned_memory_usage");
+        addFeatureToSchema("max_assigned_memory_usage");
+        addFeatureToSchema("avg_assigned_memory_usage");
+        addFeatureToSchema("min_unmapped_page_cache");
+        addFeatureToSchema("max_unmapped_page_cache");
+        addFeatureToSchema("avg_unmapped_page_cache");
+        addFeatureToSchema("min_total_page_cache");
+        addFeatureToSchema("max_total_page_cache");
+        addFeatureToSchema("avg_total_page_cache");
+        addFeatureToSchema("min_maximum_memory_usage");
+        addFeatureToSchema("max_maximum_memory_usage");
+        addFeatureToSchema("avg_maximum_memory_usage");
+        addFeatureToSchema("min_disk_io_time");
+        addFeatureToSchema("max_disk_io_time");
+        addFeatureToSchema("avg_disk_io_time");
+        addFeatureToSchema("min_local_disk_space_usage");
+        addFeatureToSchema("max_local_disk_space_usage");
+        addFeatureToSchema("avg_local_disk_space_usage");
+        addFeatureToSchema("min_maximum_cpu_rate");
+        addFeatureToSchema("max_maximum_cpu_rate");
+        addFeatureToSchema("avg_maximum_cpu_rate");
+        addFeatureToSchema("min_maximum_disk_io_time");
+        addFeatureToSchema("max_maximum_disk_io_time");
+        addFeatureToSchema("avg_maximum_disk_io_time");
     }
 }

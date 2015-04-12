@@ -10,7 +10,7 @@ public class LocalDiskSpaceUsage extends TaskUsageFeature {
   public void generateFeatureSingleValue(String[] tableRowArray) {
 
     String jobId = tableRowArray[mJobIdIndex];
-    String localDiskSpaceUsage = tableRowArray[mSchema.indexOf("local disk space usage")];
+    String localDiskSpaceUsage = tableRowArray[mTableSchema.indexOf("local disk space usage")];
     if (localDiskSpaceUsage == null || !mJobHash.containsKey(jobId)) {
       return;
     }

@@ -10,7 +10,7 @@ public class DiskIOTime extends TaskUsageFeature {
   public void generateFeatureSingleValue(String[] tableRowArray) {
 
     String jobId = tableRowArray[mJobIdIndex];
-    String diskIOTime = tableRowArray[mSchema.indexOf("disk I/O time")];
+    String diskIOTime = tableRowArray[mTableSchema.indexOf("disk I/O time")];
     if (diskIOTime == null || !mJobHash.containsKey(jobId)) {
       return;
     }

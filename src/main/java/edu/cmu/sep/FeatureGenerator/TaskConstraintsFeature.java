@@ -12,7 +12,7 @@ package edu.cmu.sep.FeatureGenerator;
 public abstract class TaskConstraintsFeature extends Feature {
     
     private static final String TABLE_NAME = "task_constraints";
-    protected final int mJobIdIndex = mSchema.indexOf("job ID");
+    protected final int mJobIdIndex = mTableSchema.indexOf("job ID");
     
     public String getTableName() {
         return TABLE_NAME;
