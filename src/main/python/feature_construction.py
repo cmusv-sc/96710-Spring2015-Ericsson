@@ -4,7 +4,16 @@ import argparse
 import collections
 from pyspark import SparkConf, SparkContext
 
-CSV_FIELDS = ('start time',
+JOB_EVENTS_FIELDS = ('time',
+                     'missing info',
+                     'job ID',
+                     'event type',
+                     'user',
+                     'scheduling class',
+                     'job name',
+                     'logical job name')
+
+TASK_USAGE_FIELDS = ('start time',
               'end time',
               'job ID',
               'task index',
@@ -26,16 +35,25 @@ CSV_FIELDS = ('start time',
               'sampled CPU usage')
 
 PRIMARY_ID = 'job ID'
-AVG_FIELDS = ('CPU rate',
-              'maximum memory usage',
-              'disk I/O time',
-              'total page cache')
+
+JOB_EVENTS_RESULT_FIELDS = 'event type'
+
+TASK_USAGE_RESULT_FIELDS = ('CPU rate',
+                  'canonical memory usage',
+                  'assigned memory usage',
+                  'unmapped page cache',
+                  'total page cache',
+                  'maximum memory usage',
+                  'disk I/O time',
+                  'local disk space usage',
+                  'maximum CPU rate',
+                  'maximum disk IO time')
 
 
-def load_record(line):
+def load_record(line, fieldCollection):
     """Parse a CSV line."""
     input = StringIO.StringIO(line)
-    reader = csv.DictReader(input, fieldnames=CSV_FIELDS)
+    reader = csv.DictReader(input, fieldnames=fieldCollection)
     return reader.next()
 
 
@@ -48,9 +66,9 @@ def writeRecords(fields, records):
     return [output.getvalue()]
 
 
-def load_csv(sc, csv_file):
+def load_csv(sc, csv_file, fieldCollection):
     """Load a CSV as an RDD"""
-    return sc.textFile(csv_file).map(load_record)
+    return sc.textFile(csv_file).map(lambda line: load_record(line, fieldCollection))
 
 
 def average_rdd(rdd, key):
@@ -64,6 +82,33 @@ def average_rdd(rdd, key):
                         (task_id, sum_ / count))
     return avg
 
+def min_rdd(rdd, key):
+	"""Create an RDD with the minimum of a given """
+	taskmem = rdd.map(lambda entry: (int(entry[PRIMARY_ID]), 
+									 float(entry[key])))
+	min_num = taskmem.combineByKey((lambda mem: mem), min, min)
+	min_result = min_num.map(lambda (task_id, min_rec): (task_id, min_rec))
+	return min_result
+
+def max_rdd(rdd, key):
+    """Create an RDD with the maximum of a given """
+    taskmem = rdd.map(lambda entry: (int(entry[PRIMARY_ID]),
+                                     float(entry[key])))
+    max_num = taskmem.combineByKey((lambda mem: mem), max, max)
+    max_result = max_num.map(lambda (task_id, max_rec): (task_id, max_rec))
+    return max_result
+
+def job_fails_helper(event_type):
+    fails = 'NO_FAIL'
+    if event_type == 3:
+        fails = 'FAIL'
+    return fails
+
+def job_fails(rdd, key):
+    """Create an RDD shows status of current job """
+    job_event_mem = rdd.map(lambda entry: (int(entry[PRIMARY_ID]),
+                                     job_fails_helper(int(entry[key]))))
+    return job_event_mem
 
 def flatten(l):
     """
@@ -99,22 +144,41 @@ if __name__ == '__main__':
     input_file = args.input_file
     output_file = args.output_file
 
-    # Load the CSV into an (id, field_dictionary) RDD
-    input_rdd = load_csv(sc, input_file)
+    # Load the job_events CSV into an (id, field_dictionary) RDD
+    job_event_rdd = load_csv(sc, input_file + "/job_events/sampleTest.csv.gz", JOB_EVENTS_FIELDS)
 
     # Generate RDDs that average fields
-    avg_rdds = [average_rdd(input_rdd, field) for field in AVG_FIELDS]
+    jobFail_rdds = [job_fails(job_event_rdd, JOB_EVENTS_RESULT_FIELDS)]
+
+    # Load the task_usage CSV into an (id, field_dictionary) RDD
+    task_usage_rdd = load_csv(sc, input_file + "/task_usage/sampleTest.csv.gz", TASK_USAGE_FIELDS)
+
+    # Generate RDDs that average fields
+    avg_rdds = [average_rdd(task_usage_rdd, field) for field in TASK_USAGE_RESULT_FIELDS]
+	
+    # Generate RDDs that maximum fields
+    max_rdds = [max_rdd(task_usage_rdd, field) for field in TASK_USAGE_RESULT_FIELDS]
+
+    # Generate RDDs that minimum fields
+    min_rdds = [min_rdd(task_usage_rdd, field) for field in TASK_USAGE_RESULT_FIELDS]
 
     # Join features together
-    joined = avg_rdds[0]
-    for i in range(1, len(avg_rdds)):
+    joined = jobFail_rdds[0]
+    for i in range(0, len(avg_rdds)):
         joined = joined.join(avg_rdds[i])
+		
+    for i in range(0, len(max_rdds)):
+        joined = joined.join(max_rdds[i])
+
+    for i in range(0, len(min_rdds)):
+        joined = joined.join(min_rdds[i])
 
     joined = joined.map(
         lambda (task_id, rdd_fields): (task_id, flatten(rdd_fields)))
 
     # Transform the RDD into a dictionary
-    output_fields = [PRIMARY_ID] + ['avg ' + f for f in AVG_FIELDS]
+    output_fields = [PRIMARY_ID] + ['Job fails'] + ['avg ' + f for f in TASK_USAGE_RESULT_FIELDS] + ['max ' + f for f in TASK_USAGE_RESULT_FIELDS] \
+                    + ['min ' + f for f in TASK_USAGE_RESULT_FIELDS]
     output_rdd = joined.map(
         lambda (task_id, rdd_fields):
             dict(zip(output_fields, [task_id] + list(rdd_fields))))

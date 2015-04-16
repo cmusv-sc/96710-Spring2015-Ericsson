@@ -38,7 +38,7 @@ public class FeatureConstructorSingleton {
         generateTableList();
         generateSchemaHash();
         generateFileListHash();
-        generateJobHash(); // Jacob: Not quite understand what is this for?
+        generateJobHash();
         initializeOutputFile();
         
         addFeatureToSchema("job ID");
