@@ -70,11 +70,16 @@ def load_csv(sc, csv_file, fieldCollection):
     """Load a CSV as an RDD"""
     return sc.textFile(csv_file).map(lambda line: load_record(line, fieldCollection))
 
+def convert_to_float(value):
+    try:
+        return float(value)
+    except ValueError:
+        return 0.0
 
 def average_rdd(rdd, key):
     """Create an RDD with the avgerage of a given """
     taskmem = rdd.map(lambda entry: (int(entry[PRIMARY_ID]),
-                                     float(entry[key])))
+                                     convert_to_float(entry[key])))
     sum_count = taskmem.combineByKey((lambda mem: (mem, 1)),
                                      (lambda a, b: (a[0] + b, a[1] + 1)),
                                      (lambda a, b: (a[0] + b[0], a[1] + b[1])))
@@ -85,7 +90,7 @@ def average_rdd(rdd, key):
 def min_rdd(rdd, key):
 	"""Create an RDD with the minimum of a given """
 	taskmem = rdd.map(lambda entry: (int(entry[PRIMARY_ID]), 
-									 float(entry[key])))
+									 convert_to_float(entry[key])))
 	min_num = taskmem.combineByKey((lambda mem: mem), min, min)
 	min_result = min_num.map(lambda (task_id, min_rec): (task_id, min_rec))
 	return min_result
@@ -93,7 +98,7 @@ def min_rdd(rdd, key):
 def max_rdd(rdd, key):
     """Create an RDD with the maximum of a given """
     taskmem = rdd.map(lambda entry: (int(entry[PRIMARY_ID]),
-                                     float(entry[key])))
+                                     convert_to_float(entry[key])))
     max_num = taskmem.combineByKey((lambda mem: mem), max, max)
     max_result = max_num.map(lambda (task_id, max_rec): (task_id, max_rec))
     return max_result
@@ -145,13 +150,13 @@ if __name__ == '__main__':
     output_file = args.output_file
 
     # Load the job_events CSV into an (id, field_dictionary) RDD
-    job_event_rdd = load_csv(sc, input_file + "/job_events/sampleTest.csv.gz", JOB_EVENTS_FIELDS)
+    job_event_rdd = load_csv(sc, input_file + "/job_events/part-00000-of-00500.csv.gz", JOB_EVENTS_FIELDS)
 
     # Generate RDDs that average fields
     jobFail_rdds = [job_fails(job_event_rdd, JOB_EVENTS_RESULT_FIELDS)]
 
     # Load the task_usage CSV into an (id, field_dictionary) RDD
-    task_usage_rdd = load_csv(sc, input_file + "/task_usage/sampleTest.csv.gz", TASK_USAGE_FIELDS)
+    task_usage_rdd = load_csv(sc, input_file + "/task_usage/part-00000-of-00500.csv.gz", TASK_USAGE_FIELDS)
 
     # Generate RDDs that average fields
     avg_rdds = [average_rdd(task_usage_rdd, field) for field in TASK_USAGE_RESULT_FIELDS]
