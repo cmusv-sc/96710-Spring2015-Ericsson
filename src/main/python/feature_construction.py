@@ -1,206 +1,136 @@
-import csv
-import StringIO
+#!/usr/bin/env python
+
 import argparse
-import collections
+import csv
+import logging
+import os
+from collections import defaultdict
+from ConfigParser import ConfigParser, NoOptionError
 from pyspark import SparkConf, SparkContext
 
-JOB_EVENTS_FIELDS = ('time',
-                     'missing info',
-                     'job ID',
-                     'event type',
-                     'user',
-                     'scheduling class',
-                     'job name',
-                     'logical job name')
-
-TASK_USAGE_FIELDS = ('start time',
-                     'end time',
-                     'job ID',
-                     'task index',
-                     'machine ID',
-                     'CPU rate',
-                     'canonical memory usage',
-                     'assigned memory usage',
-                     'unmapped page cache',
-                     'total page cache',
-                     'maximum memory usage',
-                     'disk I/O time',
-                     'local disk space usage',
-                     'maximum CPU rate',
-                     'maximum disk IO time',
-                     'cycles per instruction',
-                     'memory accesses per instruction',
-                     'sample portion',
-                     'aggregation type',
-                     'sampled CPU usage')
-
-PRIMARY_ID = 'job ID'
-
-JOB_EVENTS_RESULT_FIELDS = 'event type'
-
-TASK_USAGE_RESULT_FIELDS = ('CPU rate',
-                            'canonical memory usage',
-                            'assigned memory usage',
-                            'unmapped page cache',
-                            'total page cache',
-                            'maximum memory usage',
-                            'disk I/O time',
-                            'local disk space usage',
-                            'maximum CPU rate',
-                            'maximum disk IO time')
+import rdd
+import feature
 
 
-def load_record(line, fieldCollection):
-    """Parse a CSV line."""
-    input = StringIO.StringIO(line)
-    reader = csv.DictReader(input, fieldnames=fieldCollection)
-    return reader.next()
+def main():
+    # Get arguments and configuration
+    args = parse_args()
+    config = parse_config(args.config)
+    logging.getLogger().setLevel(logging.INFO)
 
+    # Load the tables, features, and schema
+    tables = get_tables(config)
+    features = get_features(config)
+    schema = parse_schema(os.path.join(args.data_dir,
+                                       config.get('main', 'schema')))
 
-def writeRecords(fields, records):
-    """Write out CSV lines"""
-    output = StringIO.StringIO()
-    writer = csv.DictWriter(output, fieldnames=fields)
-    for record in records:
-        writer.writerow(record)
-    return [output.getvalue()]
+    sc = initialize_spark()
 
+    # Generate RDDs for each table
+    table_rdds = dict(zip(tables.iterkeys(), [rdd.load_csv(
+        sc, os.path.join(args.data_dir, table, csv_file), schema[table])
+        for table, csv_file in tables.iteritems()]))
 
-def load_csv(sc, csv_file, fieldCollection):
-    """Load a CSV as an RDD"""
-    return sc.textFile(csv_file).map(lambda line:
-                                     load_record(line, fieldCollection))
+    # Generate the RDDs of all features
+    feature_rdds = []
+    feature_names = []
+    feature_key = config.get('main', 'key')
+    for feature_name, feature_info in features.iteritems():
+        # Generate an RDD with all necessary fields for the feature
+        field_rdd = rdd.field_rdd(table_rdds[feature_info['table']],
+                                  feature_key,
+                                  feature_info['fields'])
 
-def convert_to_float(value):
-    try:
-        return float(value)
-    except ValueError:
-        return 0.0
+        # Generate an RDD from the specified functions
+        for function in feature_info['functions']:
+            function_name = '{0}_rdd'.format(function)
+            feature_rdds.append(getattr(feature, function_name)(field_rdd))
+            feature_names.append(feature_name if
+                                 len(feature_info['functions']) == 1
+                                 else '{0} {1}'.format(function, feature_name))
 
-def average_rdd(rdd, key):
-    """Create an RDD with the avgerage of a given """
-    taskmem = rdd.map(lambda entry: (int(entry[PRIMARY_ID]),
-                                     convert_to_float(entry[key])))
-    sum_count = taskmem.combineByKey((lambda mem: (mem, 1)),
-                                     (lambda a, b: (a[0] + b, a[1] + 1)),
-                                     (lambda a, b: (a[0] + b[0], a[1] + b[1])))
-    avg = sum_count.map(lambda (task_id, (sum_, count)):
-                        (task_id, sum_ / count))
-    return avg
+    # Join the RDDs on their key
+    joined_rdds = rdd.join_rdds(feature_rdds)
 
+    # Write to CSV
+    output_fields = [feature_key] + feature_names
+    output_rdd = joined_rdds.map(lambda (key, feature_values): dict(
+        zip(output_fields, [key] + list(feature_values))))
+    output_rdd.mapPartitions(lambda records: rdd.writeRecords(
+        output_fields, records)).saveAsTextFile(args.output_file)
 
-def min_rdd(rdd, key):
-	"""Create an RDD with the minimum of a given """
-	taskmem = rdd.map(lambda entry: (int(entry[PRIMARY_ID]),
-                                  convert_to_float(entry[key])))
-	min_num = taskmem.combineByKey((lambda mem: mem), min, min)
-	min_result = min_num.map(lambda (task_id, min_rec): (task_id, min_rec))
-	return min_result
-
-def max_rdd(rdd, key):
-    """Create an RDD with the maximum of a given """
-    taskmem = rdd.map(lambda entry: (int(entry[PRIMARY_ID]),
-                                     convert_to_float(entry[key])))
-    max_num = taskmem.combineByKey((lambda mem: mem), max, max)
-    max_result = max_num.map(lambda (task_id, max_rec): (task_id, max_rec))
-    return max_result
-
-
-def job_fails_helper(event_type):
-    fails = 'NO_FAIL'
-    if event_type == 3:
-        fails = 'FAIL'
-        return fails
-
-
-def job_fails(rdd, key):
-    """Create an RDD shows status of current job """
-    job_event_mem = rdd.map(lambda entry: (int(entry[PRIMARY_ID]),
-                                           job_fails_helper(int(entry[key]))))
-    return job_event_mem
-
-
-def flatten(l):
-    """
-    Flatten an irregular list of lists
-    http://stackoverflow.com/questions/2158395/flatten-an-irregular-list-of-lists-in-python
-    """
-    for el in l:
-        if ((isinstance(el, collections.Iterable) and not
-             isinstance(el, basestring))):
-            for sub in flatten(el):
-                yield sub
-        else:
-            yield el
+    logging.info("Processed {0} {1}(s)".format(output_rdd.count(),
+                                               feature_key))
+    logging.info(output_rdd.first())
 
 
 def parse_args():
-    """Get arguments"""
+    """Get arguments."""
     parser = argparse.ArgumentParser()
-    parser.add_argument('input_file', help='input file')
-    parser.add_argument('output_file', help='output file')
+    parser.add_argument('data_dir', help='Data directory')
+    parser.add_argument('output_file', help='Output file')
+    parser.add_argument('--config', help='Config file',
+                        default='../resources/config/feature_construction.ini')
     args = parser.parse_args()
     return args
 
-if __name__ == '__main__':
-    # Configure and initialize Spark
+
+def parse_config(config_filepath):
+    """Get configuration."""
+    config = ConfigParser()
+    config.read(config_filepath)
+    return config
+
+
+def parse_schema(schema_filepath):
+    """Parse a schema CSV file and return a dict of tables and fields."""
+    with open(schema_filepath, 'r') as schema_file:
+        schema_reader = csv.DictReader(schema_file)
+
+        schema = defaultdict(list)
+        for row in schema_reader:
+            file_pattern = row['file pattern'].split('/')[0]
+            schema[file_pattern].append(row['content'])
+
+    return dict(schema)
+
+
+def get_tables(config):
+    """Get a dict of { table name: file pattern }."""
+    table_list = config.get('main', 'tables').split(',')
+    tables = dict(zip(table_list, [config.get('table_files', files)
+                                   for files in table_list]))
+    return tables
+
+
+def get_features(config):
+    """Get a dict of features with their corresponding info."""
+    feature_list = config.get('main', 'features').split(',')
+    feature_properties = ['table', 'fields', 'functions']
+    features = defaultdict(dict)
+
+    for feature_name in feature_list:
+        for prop in feature_properties:
+            try:
+                value = config.get(feature_name, prop)
+            except NoOptionError as ex:
+                # Allow the feature name to be the default 'fields' value
+                if prop == 'fields':
+                    value = feature_name
+                else:
+                    raise ex
+            value = value.split(',') if prop.endswith('s') else value
+            features[feature_name][prop] = value
+
+    return dict(features)
+
+
+def initialize_spark():
+    """Configure and initialize Spark."""
     conf = (SparkConf().setAppName('Ericsson').
             # Allow spark to overwrite output files
             set("spark.hadoop.validateOutputSpecs", "false"))
-    sc = SparkContext(conf=conf)
+    return SparkContext(conf=conf)
 
-    # Get arguments
-    args = parse_args()
-    input_file = args.input_file
-    output_file = args.output_file
-
-    # Load the job_events CSV into an (id, field_dictionary) RDD
-    job_event_rdd = load_csv(sc, input_file + "/job_events/part-00000-of-00500.csv.gz", JOB_EVENTS_FIELDS)
-
-    # Generate RDDs that average fields
-    jobFail_rdds = [job_fails(job_event_rdd, JOB_EVENTS_RESULT_FIELDS)]
-
-    # Load the task_usage CSV into an (id, field_dictionary) RDD
-    task_usage_rdd = load_csv(sc, input_file + "/task_usage/part-00000-of-00500.csv.gz", TASK_USAGE_FIELDS)
-
-    # Generate RDDs that average fields
-    avg_rdds = [average_rdd(task_usage_rdd, field)
-                for field in TASK_USAGE_RESULT_FIELDS]
-
-    # Generate RDDs that maximum fields
-    max_rdds = [max_rdd(task_usage_rdd, field)
-                for field in TASK_USAGE_RESULT_FIELDS]
-
-    # Generate RDDs that minimum fields
-    min_rdds = [min_rdd(task_usage_rdd, field)
-                for field in TASK_USAGE_RESULT_FIELDS]
-
-    # Join features together
-    joined = jobFail_rdds[0]
-    for i in range(0, len(avg_rdds)):
-        joined = joined.join(avg_rdds[i])
-
-    for i in range(0, len(max_rdds)):
-        joined = joined.join(max_rdds[i])
-
-    for i in range(0, len(min_rdds)):
-        joined = joined.join(min_rdds[i])
-
-    joined = joined.map(
-        lambda (task_id, rdd_fields): (task_id, flatten(rdd_fields)))
-
-    # Transform the RDD into a dictionary
-    output_fields = ([PRIMARY_ID] + ['Job fails'] +
-                     ['avg ' + f for f in TASK_USAGE_RESULT_FIELDS] +
-                     ['max ' + f for f in TASK_USAGE_RESULT_FIELDS] +
-                     ['min ' + f for f in TASK_USAGE_RESULT_FIELDS])
-    output_rdd = joined.map(
-        lambda (task_id, rdd_fields):
-        dict(zip(output_fields, [task_id] + list(rdd_fields))))
-
-    # Write to CSV
-    output_rdd.mapPartitions(lambda records: writeRecords(
-        output_fields, records)).saveAsTextFile(output_file)
-
-    print "Processed {0}'s: {1}".format(PRIMARY_ID, output_rdd.count())
-    print output_rdd.first()
+if __name__ == '__main__':
+    main()
