@@ -1,3 +1,6 @@
+import operator
+
+
 def average_rdd(field_rdd):
     sum_count = field_rdd.combineByKey(
         (lambda val: (val, 1)),
@@ -25,3 +28,26 @@ def job_status_rdd(field_rdd):
     job_event_rdd = field_rdd.map(lambda entry: (
         entry[0], 'FAIL' if entry[1] == 3 else 'NO_FAIL'))
     return job_event_rdd
+
+
+def combined_feature_helper(field_rdd, op):
+    """Create an RDD to reduce list of parameters with operation """
+    combined_feature_rdd = field_rdd.map(lambda entry: (
+        entry[0], 0 if op == operator.div and 0 in entry[1] else reduce(op, entry[1])))
+    return average_rdd(combined_feature_rdd)
+
+
+def add_rdd(field_rdd):
+    return combined_feature_helper(field_rdd, operator.add)
+
+
+def subtract_rdd(field_rdd):
+    return combined_feature_helper(field_rdd, operator.sub)
+
+
+def multiply_rdd(field_rdd):
+    return combined_feature_helper(field_rdd, operator.mul)
+
+
+def divide_rdd(field_rdd):
+    return combined_feature_helper(field_rdd, operator.div)
