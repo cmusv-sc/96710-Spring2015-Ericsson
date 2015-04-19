@@ -42,7 +42,7 @@ def join_rdds(rdds):
     for i in range(1, len(rdds)):
         joined = joined.join(rdds[i])
 
-    return joined.map(lambda (key, rdd_fields): (key, flatten(rdd_fields)))
+    return joined.map(lambda (key, rdd_fields): (key, flatten([rdd_fields])))
 
 
 def flatten(l):
