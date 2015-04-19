@@ -28,10 +28,12 @@ def writeRecords(fields, records):
 def field_rdd(table_rdd, key, fields):
     if len(fields) == 1:
         return table_rdd.map(lambda entry:
-                             (int(entry[key]), float(entry[fields[0]])))
+                             (int(entry[key]), float(entry[fields[0]])
+                              if entry[fields[0]] else 0.0))
     else:
         return table_rdd.map(lambda entry:
                              (int(entry[key]), [float(entry[field])
+                                                if entry[field] else 0.0
                                                 for field in fields]))
 
 
