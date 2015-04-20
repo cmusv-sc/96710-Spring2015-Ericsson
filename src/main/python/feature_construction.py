@@ -21,8 +21,8 @@ def main():
     # Load the tables, features, and schema
     tables = get_tables(config)
     features = get_features(config)
-    schema = parse_schema(os.path.join(args.data_dir,
-                                       config.get('main', 'schema')))
+    schema_path = args.schema or os.path.join(args.data_dir, config.get('main', 'schema'))
+    schema = parse_schema(schema_path)
 
     sc = initialize_spark()
 
@@ -71,6 +71,7 @@ def parse_args():
     parser.add_argument('output_file', help='Output file')
     parser.add_argument('--config', help='Config file',
                         default='../resources/config/feature_construction.ini')
+    parser.add_argument('--schema', help='Schema file')
     args = parser.parse_args()
     return args
 
