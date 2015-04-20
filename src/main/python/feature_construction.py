@@ -21,7 +21,8 @@ def main():
     # Load the tables, features, and schema
     tables = get_tables(config)
     features = get_features(config)
-    schema_path = args.schema or os.path.join(args.data_dir, config.get('main', 'schema'))
+    schema_path = args.schema or os.path.join(args.data_dir,
+                                              config.get('main', 'schema'))
     schema = parse_schema(schema_path)
 
     sc = initialize_spark()
@@ -58,6 +59,10 @@ def main():
         zip(output_fields, [key] + list(feature_values))))
     output_rdd.mapPartitions(lambda records: rdd.writeRecords(
         output_fields, records)).saveAsTextFile(args.output_file)
+
+    # Print header
+    for field in output_fields:
+        print field
 
     logging.info("Processed {0} {1}(s)".format(output_rdd.count(),
                                                feature_key))
