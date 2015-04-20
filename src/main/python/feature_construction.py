@@ -60,9 +60,11 @@ def main():
     output_rdd.mapPartitions(lambda records: rdd.writeRecords(
         output_fields, records)).saveAsTextFile(args.output_file)
 
-    # Print header
-    for field in output_fields:
-        print field
+    # Output headers
+    if args.output_headers:
+        with open(args.output_headers, 'w') as headers:
+            for field in output_fields:
+                headers.write(field + '\n')
 
     logging.info("Processed {0} {1}(s)".format(output_rdd.count(),
                                                feature_key))
@@ -77,6 +79,7 @@ def parse_args():
     parser.add_argument('--config', help='Config file',
                         default='../resources/config/feature_construction.ini')
     parser.add_argument('--schema', help='Schema file')
+    parser.add_argument('--output_headers', help='Output header files')
     args = parser.parse_args()
     return args
 
