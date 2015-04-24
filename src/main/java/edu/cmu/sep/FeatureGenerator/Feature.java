@@ -5,7 +5,10 @@
  */
 package edu.cmu.sep.FeatureGenerator;
 
+import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 
@@ -34,15 +37,36 @@ public abstract class Feature {
     public void generateFeatureAllRows() throws IOException {
         // Add feature to schema
         addFeatureToSchema();
+        String tableName = getTableName();
         
         for(String file : mFileList) {
-            FlatFileReader reader = new FlatFileReader(file, ',');
+            String flatFile = "";
+            if (tableName.equals("job_events")) {
+                flatFile = file.substring(0, file.length() - 3);
+            } else if (tableName.equals("job_features")) {
+                flatFile = file;
+            } else {
+                GzipFile gzipFile = new GzipFile(file);
+                flatFile = gzipFile.gunZipFile();
+            }
+
+            FlatFileReader reader = new FlatFileReader(flatFile, ',');
             String[] tableRowArray;
             do {
                 tableRowArray = reader.readRecord();
                 if(tableRowArray[0] == null) break;
                 generateFeatureSingleValue(tableRowArray);
             } while (tableRowArray != null);
+
+            try {
+                if (!tableName.equals("job_features")) {
+                    File deleteFile = new File(flatFile);
+                    Files.deleteIfExists(deleteFile.toPath());
+                }
+            } catch (Exception e) {
+                System.err.println("Delete flat file failed: " + flatFile);
+            }
+
         }
         FeatureConstructorSingleton.getInstance().updateOutputFile(mFeatureSchema);
         FeatureConstructorSingleton.getInstance().clearJobHash();

@@ -121,7 +121,7 @@ public class FeatureConstructorSingleton {
         File[] tableFiles = tableFolder.listFiles();
 
         for (File tableFile : tableFiles) {
-            if(tableFile.isFile() && tableFile.getName().endsWith(".csv")) {
+            if(tableFile.isFile() && tableFile.getName().endsWith(".gz")) {
                 tableList.add(tableFile.getAbsolutePath());
             }
 
@@ -156,7 +156,10 @@ public class FeatureConstructorSingleton {
         String[] tableRowArray;
         for(String file : fileList) {
             try {
-                FlatFileReader reader = new FlatFileReader(file, ',');
+                GzipFile gzipFile = new GzipFile(file);
+                String flatFile = gzipFile.gunZipFile();
+
+                FlatFileReader reader = new FlatFileReader(flatFile, ',');
                 do {
                     tableRowArray = reader.readRecord();
                     if(tableRowArray[jobIdIndex] == null) break;
