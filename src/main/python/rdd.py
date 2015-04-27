@@ -3,20 +3,19 @@ import StringIO
 import collections
 
 
-def load_record(line, fieldCollection):
+def load_record(line, headers):
     """Parse a CSV line."""
     input = StringIO.StringIO(line)
-    reader = csv.DictReader(input, fieldnames=fieldCollection)
+    reader = csv.DictReader(input, fieldnames=headers)
     return reader.next()
 
 
-def load_csv(sc, csv_file, fieldCollection):
+def load_csv(sc, csv_file, headers):
     """Load a CSV as an RDD"""
-    return sc.textFile(csv_file).map(lambda line:
-                                     load_record(line, fieldCollection))
+    return sc.textFile(csv_file).map(lambda line: load_record(line, headers))
 
 
-def writeRecords(fields, records):
+def write_records(fields, records):
     """Write out CSV lines"""
     output = StringIO.StringIO()
     writer = csv.DictWriter(output, fieldnames=fields)

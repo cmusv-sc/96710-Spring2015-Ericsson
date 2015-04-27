@@ -57,7 +57,7 @@ def main():
     output_fields = [feature_key] + feature_names
     output_rdd = joined_rdds.map(lambda (key, feature_values): dict(
         zip(output_fields, [key] + list(feature_values))))
-    output_rdd.mapPartitions(lambda records: rdd.writeRecords(
+    output_rdd.mapPartitions(lambda records: rdd.write_records(
         output_fields, records)).saveAsTextFile(args.output_file)
 
     # Output headers
@@ -136,7 +136,7 @@ def get_features(config):
 
 def initialize_spark():
     """Configure and initialize Spark."""
-    conf = (SparkConf().setAppName('Ericsson').
+    conf = (SparkConf().setAppName('FeatureConstruction').
             # Allow spark to overwrite output files
             set("spark.hadoop.validateOutputSpecs", "false"))
     return SparkContext(conf=conf)
