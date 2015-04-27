@@ -42,6 +42,9 @@ def main():
                                   feature_key,
                                   feature_info['fields'])
 
+        if len(feature_info['functions']) > 1:
+            field_rdd.cache()
+
         # Generate an RDD from the specified functions
         for function in feature_info['functions']:
             function_name = '{0}_rdd'.format(function)
