@@ -57,7 +57,7 @@ public abstract class Feature {
                 if(tableRowArray[0] == null) break;
                 generateFeatureSingleValue(tableRowArray);
             } while (tableRowArray != null);
-
+            reader.close();
             try {
                 if (!tableName.equals("job_features")) {
                     File deleteFile = new File(flatFile);

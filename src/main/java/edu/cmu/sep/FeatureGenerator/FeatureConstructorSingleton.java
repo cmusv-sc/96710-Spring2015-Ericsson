@@ -11,6 +11,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.*;
 import java.nio.file.Files;
+import java.lang.Thread;
 
 /**
  *
@@ -34,10 +35,10 @@ public class FeatureConstructorSingleton {
         return mInstance;
     }
     
-    public void Initialize() {
+    public void Initialize(int fileCount) {
         generateTableList();
         generateSchemaHash();
-        generateFileListHash();
+        generateFileListHash(fileCount);
         generateJobHash();
         initializeOutputFile();
         
@@ -45,7 +46,7 @@ public class FeatureConstructorSingleton {
     }
     
     private String getDatasetRoot() {
-        return "inputData/";
+        return "clusterdata-2011-2/";
     }
     
     private String getOutputDir() {
@@ -108,7 +109,7 @@ public class FeatureConstructorSingleton {
         return getOutputDir() + "job_features.csv";
     }
     
-    private ArrayList<String> generateFileList(String table) {
+    private ArrayList<String> generateFileList(String table, int fileCount) {
         
         ArrayList<String> tableList = new ArrayList<String>();
         File tableFolder = new File(getDatasetRoot() + table);
@@ -119,21 +120,26 @@ public class FeatureConstructorSingleton {
       }
 
         File[] tableFiles = tableFolder.listFiles();
-
+        int counter = 0;
         for (File tableFile : tableFiles) {
             if(tableFile.isFile() && tableFile.getName().endsWith(".gz")) {
                 tableList.add(tableFile.getAbsolutePath());
+                counter++;
             }
 
+            if(counter >= fileCount) {
+                break;
+            }
         }
-        
+        System.out.println(table + " SIZE " + tableList.size());
+
         return tableList;
     }
     
-    private void generateFileListHash() {
+    private void generateFileListHash(int fileCount) {
         mFileListHash = new HashMap<String, ArrayList<String>>();
         for(String table : mTableArray) {
-            mFileListHash.put(table, generateFileList(table));
+            mFileListHash.put(table, generateFileList(table, fileCount));
         }
     }
     
@@ -260,7 +266,7 @@ public class FeatureConstructorSingleton {
                 }
                 lineToWrite = lineToWrite.substring(0, lineToWrite.length() - 2) + endLine;
               } else {
-                lineToWrite = lineToWrite + "," + endLine;
+                lineToWrite = lineToWrite + ",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,," + endLine;
               }
 
                 outputStream.write(lineToWrite.getBytes());

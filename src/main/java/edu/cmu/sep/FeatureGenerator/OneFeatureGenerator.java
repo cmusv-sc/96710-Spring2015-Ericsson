@@ -1,15 +1,17 @@
 package edu.cmu.sep.FeatureGenerator;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.logging.Logger;
-
 
 /**
  * Created by Jacob on 3/9/15.
@@ -24,23 +26,61 @@ public class OneFeatureGenerator {
 //      return;
 //    }
 
+      
+      /*
+    String inputData = "inputData/";
+    String config = "src/main/resources/config/feature_construction.ini";
+    
+    if (argv.length > 0) {
+        inputData = argv[0];
+    }
+    
+    if (argv.length > 1) {
+        config = argv[1];
+    }
+    
+    File inputDataFile = new File(inputData);
+    
+    if (!inputDataFile.exists()) {
+        System.out.println("InputFile directory does not exist.");
+        System.exit(5);
+    }
+    
+    File configFile = new File(config);
+    
+    if (!configFile.exists()) {
+        System.out.println("feature configuration file does not exist");
+        System.exit(5);
+    }
+     */ 
     //String output = argv[1];
 
     //String inputFilePath = setWorkingInputFile(argv[0]);
     //String inputFilePath = setWorkingInputFile("task_usage");
     // processGoogleDatasetFiles();
-    FeatureConstructorSingleton.getInstance().Initialize();
+      
+      
+      int[] fileCountArray = {1, 2, 5, 10, 20, 50, 100, 200, 500};
+      
+      for(int fileCount : fileCountArray) {
+          
+          recordTimeStamp("(Start) Number of Files: " + Integer.toString(fileCount));
+          FeatureConstructorSingleton.getInstance().Initialize(fileCount);
 
-    // Create job fail feature
-    JobEventsFeature jobEventsFeature = new JobEventsFeature();
-    jobEventsFeature.generateFeatureAllRows();
+          // Create job fail feature
+          JobEventsFeature jobEventsFeature = new JobEventsFeature();
+          jobEventsFeature.generateFeatureAllRows();
 
-    //Create job duration feature
-    TaskUsageFeature taskUsageFeature = new TaskUsageFeature();
-    taskUsageFeature.generateFeatureAllRows();
-    
-    CombinedFeature combinedFeature = new CombinedFeature();
-    combinedFeature.generateFeatureAllRows();
+          //Create job duration feature
+          TaskUsageFeature taskUsageFeature = new TaskUsageFeature();
+          taskUsageFeature.generateFeatureAllRows();
+
+          //CombinedFeature combinedFeature = new CombinedFeature();
+          //combinedFeature.generateFeatureAllRows();
+          //recordTimeStamp("(End) Number of Files: " + Integer.toString(fileCount));
+      }
+      
+
 //      JobDurationFeature jobDurationFeature = new JobDurationFeature();
 //      jobDurationFeature.generateFeatureAllRows();
 
@@ -80,6 +120,31 @@ public class OneFeatureGenerator {
     
   }
 
+  
+    private static void recordTimeStamp(String text) {
+        BufferedWriter writer = null;
+        try {
+            //create a temporary file
+            String timeLog = new SimpleDateFormat("yyyyMMdd_HHmmss").format(Calendar.getInstance().getTime());
+            File logFile = new File(timeLog);
+
+            // This will output the full path where the file will be written to...
+            System.out.println(logFile.getCanonicalPath());
+
+            writer = new BufferedWriter(new FileWriter(logFile));
+            writer.write(timeLog + "\n");
+            writer.write(text + "\n");
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                // Close the writer regardless of what happens...
+                writer.close();
+            } catch (Exception e) {
+            }
+        }
+    }
+  
   private static void processGoogleDatasetFiles() throws Exception {
       File inputDir = new File("inputData/");
       if (!inputDir.exists()) {

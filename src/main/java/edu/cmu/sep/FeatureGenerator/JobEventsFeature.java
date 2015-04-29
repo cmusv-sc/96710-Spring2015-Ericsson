@@ -36,7 +36,8 @@ public class JobEventsFeature extends Feature {
         value = new ArrayList<String>();
         value.add(status);
       } else {
-        value.set(0, status);
+        if (value.get(0).equals("NO_FAIL"))
+            value.set(0, status);
       }
       mJobHash.put(jobId, value);
     }

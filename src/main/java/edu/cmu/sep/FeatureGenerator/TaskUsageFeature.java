@@ -48,6 +48,13 @@ public class TaskUsageFeature extends Feature {
         return;
       }
 
+        if (startTime.length() == 0 || endTime.length() == 0 || cpuRate.length() == 0 || canonicalMemUsage.length() == 0 ||
+          assignedMemUsage.length() == 0 || unmappedMemUsage.length() == 0 || totalPageCache.length() == 0 ||
+          maxMemUsage.length() == 0 || diskIOTime.length() == 0 || localDiskSpaceUsage.length() == 0 ||
+          maxCPURate.length() == 0 || maxDiskIOTime.length() == 0) {
+        return;
+      }
+      
       if (maxDiskIOTime.equals("")) {
         maxDiskIOTime = "0";
       }
@@ -91,7 +98,7 @@ public class TaskUsageFeature extends Feature {
         values.set(2, max);
         values.set(3, newAvgNum);
       }
-
+      /*
       // Order: Min, Max, Avg canonical memory usage
       if (newRecord) {
         values.add(canonicalMemUsage);
@@ -298,7 +305,7 @@ public class TaskUsageFeature extends Feature {
         values.set(29, max);
         values.set(30, newAvgNum);
       }
-
+      */
       mJobHash.put(jobId, values);
 
     }
