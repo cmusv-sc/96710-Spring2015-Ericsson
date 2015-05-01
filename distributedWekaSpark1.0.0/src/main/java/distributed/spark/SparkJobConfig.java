@@ -738,6 +738,9 @@ public class SparkJobConfig extends DistributedJobConfig {
     if (!DistributedJobConfig.isEmpty(getSparkHomeDirectory())) {
       sConf.setSparkHome(getSparkHomeDirectory());
     }
+    
+//    sConf.set("spark.driver.host", "204.28.124.73");
+//    sConf.set("spark.driver.port", "45000");
 
     boolean hasYarn = false;
     // set user-supplied properties

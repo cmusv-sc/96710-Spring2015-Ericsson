@@ -576,6 +576,9 @@ public class CrossRefMultilayerPerceptronValidation extends ASEvaluation impleme
   @Override
   public double evaluateSubset(BitSet subset) throws Exception {
 	  
+	  subset = new BitSet(m_numAttribs);
+	  subset.flip(0, 20);
+	  
 	  m_debuglog.log(subset.toString());
 	  
 	  int numAttributes = 0;
