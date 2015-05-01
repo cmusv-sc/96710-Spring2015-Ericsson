@@ -60,6 +60,30 @@ public class WekaAttributeSelectionSparkJobBeanInfo extends SparkJobBeanInfo {
       p1.setPropertyEditorClass(weka.gui.beans.EnvironmentField.class);
       pds.add(p1);
 
+      p1 =
+    		  new PropertyDescriptor("runsCount",
+    				  WekaAttributeSelectionSparkJob.class);
+      p1.setPropertyEditorClass(weka.gui.beans.EnvironmentField.class);
+      pds.add(p1);
+
+      p1 =
+    		  new PropertyDescriptor("flipCount",
+    				  WekaAttributeSelectionSparkJob.class);
+      p1.setPropertyEditorClass(weka.gui.beans.EnvironmentField.class);
+      pds.add(p1);
+
+      p1 =
+    		  new PropertyDescriptor("neighborsCount",
+    				  WekaAttributeSelectionSparkJob.class);
+      p1.setPropertyEditorClass(weka.gui.beans.EnvironmentField.class);
+      pds.add(p1);
+
+      p1 =
+    		  new PropertyDescriptor("randomChance",
+    				  WekaAttributeSelectionSparkJob.class);
+      p1.setPropertyEditorClass(weka.gui.beans.EnvironmentField.class);
+      pds.add(p1);
+
       return pds.toArray(new PropertyDescriptor[1]);
     } catch (Exception ex) {
       ex.printStackTrace();

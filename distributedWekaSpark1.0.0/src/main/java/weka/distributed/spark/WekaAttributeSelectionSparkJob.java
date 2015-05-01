@@ -14,8 +14,7 @@
  */
 
 /*
- *    WekaClassifierEvaluationSparkJob
- *    Copyright (C) 2014 University of Waikato, Hamilton, New Zealand
+ *    WekaAttributeSelectionSparkJob
  *
  */
 
@@ -29,9 +28,11 @@ import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.Collection;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.Vector;
@@ -79,16 +80,12 @@ import distributed.core.DistributedJob;
 import distributed.core.DistributedJobConfig;
 
 /**
- * Spark job for running an evaluation of a classifier or a regressor. Invokes
- * up to four separate jobs (passes over the data). 1) Header creation, 2)
- * optional randomly shuffled data chunk creation, 3) model construction and 4)
- * model evaluation. Can perform evaluation on the training data, on a separate
- * test set, or via cross-validation. In the case of the later, models for all
- * folds are created and aggregated in one pass (job) and then evaluated on all
- * folds in a second job.
+ * Spark job for running an automated attribute selection process over a dataset. 
+ * Modified from original source code of WekaClassifierEvaluationSparkJob by
+ * Mark Hall.
  * 
- * @author Mark Hall (mhall{[at]}pentaho{[dot]}com)
- * @version $Revision: 11611 $
+ * @author Khoa DoBa
+ * @version 1.0
  */
 public class WekaAttributeSelectionSparkJob extends SparkJob implements
   TextProducer, InstancesProducer, CommandlineRunnable {
@@ -131,7 +128,28 @@ public class WekaAttributeSelectionSparkJob extends SparkJob implements
    * results
    */
   protected String m_optionalOutputSubDir = "";
-
+  
+  /**
+   * Runs count for SLS search algorithm
+   */
+  protected String m_runsCount = "";
+  
+  /**
+   * flip count for SLS search algorithm
+   */
+  protected String m_flipCount = "";
+  
+  /**
+   * Greedy neighbors count for SLS search algorithm
+   */
+  protected String m_neighborsCount = "";
+  
+  /**
+   * Random step chance for SLS search algorithm
+   */
+  protected String m_randomChance = "";
+  
+  
   /**
    * Constructor
    */
@@ -151,8 +169,7 @@ public class WekaAttributeSelectionSparkJob extends SparkJob implements
    * @return help info for this job
    */
   public String globalInfo() {
-    return "Evaluates a classifier using either the training data, "
-      + "a separate test set or a cross-validation.";
+    return "Search for relevant attributes using SLS search and Classifier Evaluation";
   }
 
   @Override
@@ -181,6 +198,18 @@ public class WekaAttributeSelectionSparkJob extends SparkJob implements
     result.add(new Option("\tOptional sub-directory of <output-dir>/eval "
       + "in which to store results.", "output-subdir", 1,
       "-output-subdir <directory name>"));
+    
+    result.add(new Option("\t Number of SLS search runs from different random"
+    		+ " starting locations", "runs-count", 1, "-runs-count <number>"));
+    
+    result.add(new Option("\t Number of flips for a search run", "flips-count", 1, 
+    		"-flips-count <number>"));
+    
+    result.add(new Option("\t Number of neighbors for a search run", "neighbors-count", 1, 
+    		"-neighbors-count <number>"));
+    
+    result.add(new Option("\t Random step chance for a search run", "random-chance", 1, 
+    		"-random-chance <number>"));
 
     WekaClassifierSparkJob tempClassifierJob = new WekaClassifierSparkJob();
 
@@ -214,6 +243,26 @@ public class WekaAttributeSelectionSparkJob extends SparkJob implements
       options.add("-output-subdir");
       options.add(getOutputSubdir());
     }
+    
+    if (!DistributedJobConfig.isEmpty(getRunsCount())) {
+        options.add("-runs-count");
+        options.add(getRunsCount());
+    }
+    
+    if (!DistributedJobConfig.isEmpty(getFlipCount())) {
+        options.add("-flips-count");
+        options.add(getFlipCount());
+    }
+    
+    if (!DistributedJobConfig.isEmpty(getNeighborsCount())) {
+        options.add("-neighbors-count");
+        options.add(getNeighborsCount());
+    }
+    
+    if (!DistributedJobConfig.isEmpty(getRandomChance())) {
+        options.add("-random-chance");
+        options.add(getRandomChance());
+    }
 
     String[] classifierJobOpts = m_classifierJob.getOptions();
     for (String o : classifierJobOpts) {
@@ -234,6 +283,18 @@ public class WekaAttributeSelectionSparkJob extends SparkJob implements
 
     String outputSubDir = Utils.getOption("output-subdir", options);
     setOutputSubdir(outputSubDir);
+    
+    String runsCount = Utils.getOption("runs-count", options);
+    setRunsCount(runsCount);
+    
+    String flipsCount = Utils.getOption("flips-count", options);
+    setFlipCount(flipsCount);
+    
+    String neighborsCount = Utils.getOption("neighbors-count", options);
+    setNeighborsCount(neighborsCount);
+    
+    String randomChance = Utils.getOption("random-chance", options);
+    setRandomChance(randomChance);
 
     String[] optionsCopy = options.clone();
 
@@ -263,6 +324,26 @@ public class WekaAttributeSelectionSparkJob extends SparkJob implements
     if (!DistributedJobConfig.isEmpty(getOutputSubdir())) {
       options.add("-output-subdir");
       options.add(getOutputSubdir());
+    }
+    
+    if (!DistributedJobConfig.isEmpty(getRunsCount())) {
+        options.add("-runs-count");
+        options.add(getRunsCount());
+    }
+    
+    if (!DistributedJobConfig.isEmpty(getFlipCount())) {
+        options.add("-flips-count");
+        options.add(getFlipCount());
+    }
+    
+    if (!DistributedJobConfig.isEmpty(getNeighborsCount())) {
+        options.add("-neighbors-count");
+        options.add(getNeighborsCount());
+    }
+    
+    if (!DistributedJobConfig.isEmpty(getRandomChance())) {
+        options.add("-random-chance");
+        options.add(getRandomChance());
     }
 
     return options.toArray(new String[options.size()]);
@@ -351,8 +432,8 @@ public class WekaAttributeSelectionSparkJob extends SparkJob implements
    */
   public String getOutputSubdir() {
     return m_optionalOutputSubDir;
-  }
-
+  } 
+  
   /**
    * Set an optional subdirectory of [output-dir]/eval in which to store results
    *
@@ -361,10 +442,83 @@ public class WekaAttributeSelectionSparkJob extends SparkJob implements
   public void setOutputSubdir(String subdir) {
     m_optionalOutputSubDir = subdir;
   }
+  
+  /**
+   * Get the number of search runs for SLS algorithm
+   *
+   * @return number of runs for search algorithm
+   */
+  public String getRunsCount() {
+    return m_runsCount;
+  }
+  
+  /**
+   * Set the number of search runs for SLS algorithm
+   *
+   * @param number of runs for search algorithm
+   */
+  public void setRunsCount(String runsCount) {
+    m_runsCount = runsCount;
+  }
+  
+  /**
+   * Get the number of flips for SLS algorithm
+   *
+   * @return number of flips for search algorithm
+   */
+  public String getFlipCount() {
+    return m_flipCount;
+  }
+  
+  /**
+   * Set the number of flips for SLS algorithm
+   *
+   * @param number of flips for search algorithm
+   */
+  public void setFlipCount(String flipCount) {
+	  m_flipCount = flipCount;
+  }
+  
+  /**
+   * Get the number of neighbors for SLS algorithm
+   *
+   * @return number of flips for search algorithm
+   */
+  public String getNeighborsCount() {
+    return m_neighborsCount;
+  }
+  
+  /**
+   * Set the number of neighbors for SLS algorithm
+   *
+   * @param number of neighbors for search algorithm
+   */
+  public void setNeighborsCount(String neighborsCount) {
+	  m_neighborsCount = neighborsCount;
+  }
+  
+  /**
+   * Get the random chance for SLS algorithm
+   *
+   * @return random chance float for search algorithm
+   */
+  public String getRandomChance() {
+    return m_randomChance;
+  }
+  
+  /**
+   * Set the random chance for SLS algorithm
+   *
+   * @param random chance float for search algorithm
+   */
+  public void setRandomChance(String chance) {
+	  m_randomChance = chance;
+  }
+  
 
-  protected Classifier[] phaseOneBuildClassifiers(JavaRDD<Instance> dataset,
-    final Instances headerNoSummary,
-    final PreconstructedFilter preconstructedFilter) throws Exception {
+  protected Map<BitSet, Classifier[]> phaseOneBuildClassifiers(JavaPairRDD<BitSet, Iterable<Instance>> dataset,
+    BitSet[] subsetList,
+    final Instances headerNoSummary) throws Exception {
 
     int totalFolds = 1;
     final String classifierMapTaskOptions =
@@ -377,7 +531,11 @@ public class WekaAttributeSelectionSparkJob extends SparkJob implements
     }
     final int tFolds = totalFolds;
 
-    final Classifier[] foldClassifiers = new Classifier[totalFolds];
+    final Map<BitSet, Classifier[]> foldClassifiers = new HashMap<BitSet, Classifier[]>();
+    for (BitSet subset : subsetList)
+    {
+    	foldClassifiers.put(subset, new Classifier[totalFolds]);
+    }
 
     // just use headerNoSummary for class index
     final int classIndex = headerNoSummary.classIndex();
@@ -391,10 +549,10 @@ public class WekaAttributeSelectionSparkJob extends SparkJob implements
       final int iterationNum = i;
       logMessage("[WekaClassifierEvaluation] Phase 1 (map), iteration "
         + (i + 1));
-
-      JavaPairRDD<Integer, Classifier> mapFolds =
+ 
+      JavaPairRDD<Tuple2<BitSet, Integer>,Classifier> mapFolds =
         dataset
-          .mapPartitionsToPair(new PairFlatMapFunction<Iterator<Instance>, Integer, Classifier>() {
+          .flatMapToPair(new PairFlatMapFunction<Tuple2<BitSet, Iterable<Instance>>, Tuple2<BitSet, Integer>,Classifier>() {
 
             /** For serialization */
             private static final long serialVersionUID = -1906414304952140395L;
@@ -402,14 +560,27 @@ public class WekaAttributeSelectionSparkJob extends SparkJob implements
             protected Instances m_header;
 
             /** Holds results */
-            protected List<Tuple2<Integer, Classifier>> m_classifiersForFolds =
-              new ArrayList<Tuple2<Integer, Classifier>>();
+            protected List<Tuple2<Tuple2<BitSet, Integer>,Classifier>> m_classifiersForFolds =
+              new ArrayList<Tuple2<Tuple2<BitSet, Integer>,Classifier>>();
+            
+//
+//			@Override
+//			public Tuple2<Integer, Classifier> call(
+//					Tuple2<PreconstructedFilter, Iterable<Instance>> arg0)
+//					throws Exception {
+//				// TODO Auto-generated method stub
+//				return null;
+//			}
 
             @Override
-            public Iterable<Tuple2<Integer, Classifier>> call(
-              Iterator<Instance> split) throws IOException,
+            public Iterable<Tuple2<Tuple2<BitSet, Integer>,Classifier>> call(
+				   Tuple2<BitSet, Iterable<Instance>> arg0)
+					throws IOException,
               DistributedWekaException {
 
+              PreconstructedFilter preconstructedFilter = GetFilterFromBitSet(arg0._1(), headerNoSummary);
+              Iterator<Instance> split = arg0._2().iterator();
+              
               Instance current = split.next();
               if (current == null) {
                 throw new IOException("No data in this partition!!");
@@ -436,7 +607,7 @@ public class WekaAttributeSelectionSparkJob extends SparkJob implements
                 try {
                   tasks[j] = new WekaClassifierMapTask();
                   WekaClassifierSparkJob.configureClassifierMapTask(tasks[j],
-                    foldClassifiers[j], classifierMapTaskOptions, iterationNum,
+                    foldClassifiers.get(arg0._1())[j], classifierMapTaskOptions, iterationNum,
                     preconstructedFilter, numSplits);
 
                   // set fold number and total folds
@@ -465,19 +636,15 @@ public class WekaAttributeSelectionSparkJob extends SparkJob implements
 
               for (int j = 0; j < tFolds; j++) {
                 tasks[j].finalizeTask();
-                m_classifiersForFolds.add(new Tuple2<Integer, Classifier>(j,
-                  tasks[j].getClassifier()));
+                m_classifiersForFolds.add(new Tuple2<Tuple2<BitSet, Integer>,Classifier>(
+                  new Tuple2<BitSet, Integer>(arg0._1(), j), tasks[j].getClassifier()));
               }
 
               return m_classifiersForFolds;
             }
+
           });
       mapFolds = mapFolds.persist(StorageLevel.MEMORY_AND_DISK());
-      JavaPairRDD<Integer, Classifier> mapFoldsSorted = mapFolds.sortByKey();// .persist(StorageLevel.MEMORY_AND_DISK());
-      mapFoldsSorted =
-        mapFoldsSorted.partitionBy(new IntegerKeyPartitioner(totalFolds))
-          .persist(StorageLevel.MEMORY_AND_DISK());
-
       // memory and disk here for fast access and to avoid
       // recomputing partial classifiers if all partial classifiers
       // can't fit in memory
@@ -485,68 +652,67 @@ public class WekaAttributeSelectionSparkJob extends SparkJob implements
       // reduce fold models
       logMessage("[WekaClassifierEvaluation] Phase 1 (reduce), iteration "
         + (i + 1));
-      JavaPairRDD<Integer, Classifier> reducedByFold =
-        mapFoldsSorted
-          .mapPartitionsToPair(new PairFlatMapFunction<Iterator<Tuple2<Integer, Classifier>>, Integer, Classifier>() {
-
+      JavaPairRDD<Tuple2<BitSet, Integer>,Classifier> reducedByFold =
+    	mapFolds.groupByKey().mapToPair(new PairFunction<Tuple2<Tuple2<BitSet, Integer>,Iterable<Classifier>>, Tuple2<BitSet,Integer>,Classifier>(){
             /** For serialization */
             private static final long serialVersionUID = 2481672301097842496L;
 
-            /** Holds reduced classifier for one fold (partition) */
-            protected List<Tuple2<Integer, Classifier>> m_reducedForFold =
-              new ArrayList<Tuple2<Integer, Classifier>>();
 
-            @Override
-            public Iterable<Tuple2<Integer, Classifier>> call(
-              Iterator<Tuple2<Integer, Classifier>> split)
-              throws DistributedWekaException {
+			@Override
+			public Tuple2<Tuple2<BitSet, Integer>, Classifier> call(
+					Tuple2<Tuple2<BitSet, Integer>, Iterable<Classifier>> arg0)
+					throws Exception, DistributedWekaException {
 
-              int foldNum = -1;
-
+			  Iterator<Classifier> split = arg0._2().iterator();	
+//				
+//              int foldNum = -1;
+//
               List<Classifier> classifiers = new ArrayList<Classifier>();
+             
               while (split.hasNext()) {
-                Tuple2<Integer, Classifier> partial = split.next();
-                if (foldNum < 0) {
-                  foldNum = partial._1().intValue();
-                } else {
-                  if (partial._1().intValue() != foldNum) {
-                    throw new DistributedWekaException(
-                      "[WekaClassifierEvaluation] build "
-                        + "classifiers reduce phase: was not expecting fold number "
-                        + "to change within a partition!");
-                  }
-                }
-                classifiers.add(partial._2());
+            	  classifiers.add(split.next());
               }
+//                Tuple2<Integer, Classifier> partial = split.next();
+//                if (foldNum < 0) {
+//                  foldNum = partial._1().intValue();
+//                } else {
+//                  if (partial._1().intValue() != foldNum) {
+//                    throw new DistributedWekaException(
+//                      "[WekaClassifierEvaluation] build "
+//                        + "classifiers reduce phase: was not expecting fold number "
+//                        + "to change within a partition!");
+//                  }
+//                }
+//                classifiers.add(partial._2());
+//              }
 
               WekaClassifierReduceTask reduceTask =
                 new WekaClassifierReduceTask();
               Classifier intermediateClassifier =
                 reduceTask.aggregate(classifiers, null, forceVote);
 
-              m_reducedForFold.add(new Tuple2<Integer, Classifier>(foldNum,
-                intermediateClassifier));
-
-              return m_reducedForFold;
+              return new Tuple2<Tuple2<BitSet, Integer>, Classifier>(arg0._1(), intermediateClassifier);
             }
+
+
           });
 
-      List<Tuple2<Integer, Classifier>> aggregated = reducedByFold.collect();
-      for (Tuple2<Integer, Classifier> t : aggregated) {
-        foldClassifiers[t._1()] = t._2();
+      List<Tuple2<Tuple2<BitSet,Integer>, Classifier>> aggregated = reducedByFold.collect();
+      for (Tuple2<Tuple2<BitSet,Integer>, Classifier> t : aggregated) {
+    	  // this makes my head hurts!
+        foldClassifiers.get(t._1()._1())[t._1()._2()] = t._2();
       }
 
       mapFolds.unpersist();
-      mapFoldsSorted.unpersist();
       reducedByFold.unpersist();
     }
 
     return foldClassifiers;
   }
 
-  protected Evaluation phaseTwoEvaluateClassifiers(JavaRDD<Instance> dataset,
+  protected List<Tuple2<BitSet, Evaluation>> phaseTwoEvaluateClassifiers(JavaPairRDD<BitSet, Iterable<Instance>> dataSet,
     final Instances headerWithSummary, final Instances headerNoSummary,
-    final Classifier[] foldClassifiers) throws Exception {
+    final Map<BitSet, Classifier[]> foldClassifiersMap) throws Exception {
 
     int totalFolds = 1;
     final String classifierMapTaskOptions =
@@ -632,9 +798,9 @@ public class WekaAttributeSelectionSparkJob extends SparkJob implements
 
     // map phase
     logMessage("[WekaClassifierEvaluation] Phase 2 (map)");
-    JavaRDD<Evaluation> mapFolds =
-      dataset
-        .mapPartitions(new FlatMapFunction<Iterator<Instance>, Evaluation>() {
+    JavaPairRDD<BitSet, Iterable<Evaluation>> mapFolds =
+      dataSet
+        .mapToPair(new PairFunction<Tuple2<BitSet, Iterable<Instance>>, BitSet, Iterable<Evaluation>>() {
 
           /** For serialization */
           private static final long serialVersionUID = 5800617408839460876L;
@@ -642,9 +808,13 @@ public class WekaAttributeSelectionSparkJob extends SparkJob implements
           protected List<Evaluation> m_evaluationForPartition =
             new ArrayList<Evaluation>();
 
-          @Override
-          public Iterable<Evaluation> call(Iterator<Instance> split)
-            throws IOException, DistributedWekaException {
+
+  		  @Override
+  		  public Tuple2<BitSet, Iterable<Evaluation>> call(
+  				Tuple2<BitSet, Iterable<Instance>> arg0) throws IOException, DistributedWekaException {
+  			  
+  			Iterator<Instance> split = arg0._2().iterator();
+  			Classifier[] foldClassifiers = foldClassifiersMap.get(arg0._1());
 
             // setup base tasks
             WekaClassifierEvaluationMapTask[] evalTasks =
@@ -686,7 +856,7 @@ public class WekaAttributeSelectionSparkJob extends SparkJob implements
                 }
                 agg.aggregate(eval);
               }
-
+              
               if (agg != null) {
                 m_evaluationForPartition.add(agg);
               }
@@ -695,19 +865,65 @@ public class WekaAttributeSelectionSparkJob extends SparkJob implements
               throw new DistributedWekaException(ex);
             }
 
-            return m_evaluationForPartition;
+            return new Tuple2<BitSet, Iterable<Evaluation>>(arg0._1(), m_evaluationForPartition);
           }
+
         });
 
     // reduce locally
     logMessage("[WekaClassifierEvaluation] Phase 2 (reduce)");
-    List<Evaluation> evals = mapFolds.collect();
-    AggregateableEvaluation aggEval = new AggregateableEvaluation(evals.get(0));
-    for (Evaluation e : evals) {
-      aggEval.aggregate(e);
-    }
+    JavaPairRDD<BitSet, Iterable<Evaluation>>mapFoldsReduced = mapFolds.reduceByKey(new Function2<Iterable<Evaluation>,Iterable<Evaluation>,Iterable<Evaluation>>(){
 
-    return aggEval;
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = -6011262863159057209L;
+
+		@Override
+		public Iterable<Evaluation> call(Iterable<Evaluation> arg0,
+				Iterable<Evaluation> arg1) throws Exception {
+			
+			List<Evaluation> returnEvals = new ArrayList<Evaluation>();
+			Iterator<Evaluation> left = arg0.iterator();
+			Iterator<Evaluation> right = arg0.iterator();
+			
+			while (left.hasNext() && right.hasNext())
+			{
+				AggregateableEvaluation aggEval = new AggregateableEvaluation(left.next());
+				aggEval.aggregate(right.next());
+				
+				returnEvals.add(aggEval);
+			}
+			
+			return returnEvals;
+			
+		}
+    	
+    });
+    JavaRDD<Tuple2<BitSet, Evaluation>> aggEval = mapFoldsReduced.map(new Function<Tuple2<BitSet,Iterable<Evaluation>>, Tuple2<BitSet, Evaluation>>(){
+
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = -4122870509656187814L;
+
+		@Override
+		public Tuple2<BitSet, Evaluation> call(
+				Tuple2<BitSet, Iterable<Evaluation>> arg0) throws Exception {
+			
+			Iterator<Evaluation> evals = arg0._2().iterator();
+			
+			AggregateableEvaluation aggEval = new AggregateableEvaluation(evals.next());
+			while (evals.hasNext())
+			{
+				aggEval.aggregate(evals.next());
+			}
+			
+			return new Tuple2<BitSet, Evaluation>(arg0._1(), aggEval);
+		}
+    	
+    });
+    return aggEval.collect();
   }
 
   @Override
@@ -870,166 +1086,160 @@ public class WekaAttributeSelectionSparkJob extends SparkJob implements
 
         setDataset(TEST_DATA, new Dataset(dataset, headerWithSummary));
       }
-      
+
+      // parse SLS algorithm arguments
       int maxTries = 1;
+      int maxFlips = 6;
+      int greedyNeighbors = 4;
+      float noise = 0.2f;
       
+      if (!DistributedJobConfig.isEmpty(getRunsCount()))
+      {
+    	  logMessage("Runs Count = " + getRunsCount());
+    	  maxTries = Integer.parseInt(getRunsCount());
+      }
+      
+      if (!DistributedJobConfig.isEmpty(getFlipCount()))
+      {
+    	  logMessage("Flip Count = " + getFlipCount());
+    	  maxFlips = Integer.parseInt(getFlipCount());
+      }
+      
+      if (!DistributedJobConfig.isEmpty(getNeighborsCount()))
+      {
+    	  logMessage("Neighbors Count = " + getNeighborsCount());
+    	  greedyNeighbors = Integer.parseInt(getNeighborsCount());
+      }
+      
+      if (!DistributedJobConfig.isEmpty(getRandomChance()))
+      {
+    	  logMessage("Random Chance = " + getRandomChance());
+    	  noise = Float.parseFloat(getRandomChance());
+      }
+
       final Random RAND = new Random();
+      int featureCount = headerNoSummary.numAttributes() - 1;
+      int MAX_NEIGHBOR_TRIES = 100;
 
-	  int featureCount = headerNoSummary.numAttributes() - 1;
+      Double maxGoal = Double.NEGATIVE_INFINITY; // performance score record while o
+      BitSet optimalState = null;
       
-      List<BitSet> startingStates = new ArrayList<BitSet>();
-//      
-//      for (int t = 0; t < maxTries; t++)
-//      {
-//    	  BitSet startNode = this.generateInitialState(featureCount, RAND);
-//    	  startingStates.add(startNode);
-//      }
-      
-      BitSet startNode = this.generateInitialState(featureCount, RAND);
-//      
-//      JavaRDD<BitSet> startingStatesRDD = sparkContext.parallelize(startingStates);
-//      
-       JavaRDD<Instance> finalDataSet = dataSet;
-       Instances finalHeaderNoSummary = headerNoSummary;
-       Instances finalHeaderWithSummary = headerWithSummary;
-      
-//      JavaPairRDD<BitSet, Double> optimalStatePairs = startingStatesRDD.mapToPair(new PairFunction<BitSet, BitSet, Double>() {
+      Set<BitSet> visitedStates = new HashSet<BitSet>();
 
-		/**
-		 * 
-		 */
-//		private static final long serialVersionUID = 4317524573561320966L;
-		
-		int maxFlips = 5;
-	    int MAX_NEIGHBOR_TRIES = 100;
-	    int greedyNeighbors = 5;
-	    float noise = 0.2f;
-	    Double maxGoal = Double.NEGATIVE_INFINITY; // performance score record while o
-	    Set<BitSet> visitedStates = new HashSet<BitSet>();
+      for (int t = 0; t < maxTries; t++)
+      {
+    	  BitSet startNode = this.generateInitialState(featureCount, RAND);
 
+    	  JavaRDD<Instance> finalDataSet = dataSet;
+    	  Instances finalHeaderNoSummary = headerNoSummary;
+    	  Instances finalHeaderWithSummary = headerWithSummary;
 
-//		@Override
-//		public Tuple2<BitSet, Double> call(BitSet arg0) throws Exception {
+    	  BitSet currentState = startNode;
 
-//		    int featureCount = finalHeaderNoSummary.numAttributes() - 1;
-		    BitSet optimalState = null;
-		      //for (int t = 0; t < maxTries; t++) {
-		          BitSet state = startNode;
-		          double goal = EvaluateSubset(state, finalDataSet, finalHeaderNoSummary, finalHeaderWithSummary); // calculate performance i
-		          if (goal > maxGoal) {
-		              maxGoal = goal; // record performance
-		              optimalState = state; // record feature set end
-		          }
-		          visitedStates.add(state);// add to taboo list1;
-		          for (int r = 0; r < maxFlips; r++) {
-		              boolean doNoiseStep = RAND.nextFloat() < noise;
-		              if (doNoiseStep) {
-		            	  // get neighbor
-		            	  state = (BitSet) state.clone();
-		                  for (int i = 0; i < MAX_NEIGHBOR_TRIES; i++) {
-		                      int index = RAND.nextInt(featureCount);
-		                      state.flip(index);
-		                      if (!visitedStates.contains(state)) {
-		                      	 break;
-		                      } else {
-		                    	  state.flip(index);
-		                      }
-		                  }
+    	  BitSet[] states = new BitSet[1];
+    	  states[0] = startNode;
 
-		            	  logMessage("Noise step, state = " + state.toString());
-		            	  
-		                  if (state != null)
-		                  {
-		                  	goal = EvaluateSubset(state, finalDataSet, finalHeaderNoSummary, finalHeaderWithSummary);
-		                  	visitedStates.add(state);
-		                  	if (goal > maxGoal) {
-		                  		maxGoal = goal; // record performance
-		                  		optimalState = state; // record feature set end
-		                  	}
-		                  }
-		              } else {
-		                  double neighborMaxGoal = Double.NEGATIVE_INFINITY;
-		                  double neighborGoal = Double.NEGATIVE_INFINITY;
-		                  BitSet neighborOptimalState = null;
-		                  BitSet neighborState = null;
-		                  for (int k = 0; k < greedyNeighbors; k++) {
-		                	  
-		                	  // get neighbor
-		                	  neighborState = (BitSet) state.clone();
-		                      for (int i = 0; i < MAX_NEIGHBOR_TRIES; i++) {
-		                          int index = RAND.nextInt(featureCount);
-		                          neighborState.flip(index);
-		                          if (!visitedStates.contains(neighborState)) {
-		                          	 break;
-		                          } else {
-		                        	  neighborState.flip(index);
-		                          }
-		                      }
-		                      
+    	  Tuple2<Double, BitSet> result = EvaluateSubset(states, finalDataSet, finalHeaderNoSummary, finalHeaderWithSummary); // calculate performance i
+    	  if (result._1() > maxGoal) {
+    		  maxGoal = result._1(); // record performance
+    		  optimalState = result._2(); // record feature set end
+    	  }
+    	  visitedStates.add(states[0]);// add to taboo list1;
 
-		                	  logMessage("greedy step, neighborState = " + neighborState.toString());
-		                      
-		                      if (neighborState != null)
-		                      {
-			                        neighborGoal = EvaluateSubset(neighborState, finalDataSet, finalHeaderNoSummary, finalHeaderWithSummary);
-			                        visitedStates.add(neighborState);
-			                        if (neighborGoal > neighborMaxGoal) {
-			                            neighborMaxGoal = neighborGoal; // record performance
-			                            neighborOptimalState = neighborState; // record feature set end
-			                        }
-		                      }
-		                  }
-		                  state = neighborOptimalState;
-		                  if (neighborMaxGoal > maxGoal) {
-		                      maxGoal = neighborMaxGoal;
-		                      optimalState = neighborOptimalState;
-		                  }
-		                  logMessage("greedy step done, next state = " + state.toString());
-		              }
-		          }
-		          
-//		     return new Tuple2<BitSet, Double>(optimalState, maxGoal);
-//		}
-    	  
-//      });
-//      
-//      optimalStatePairs.persist(StorageLevel.MEMORY_AND_DISK());
-//      Tuple2<BitSet, Double> finalState = optimalStatePairs.reduce(new Function2<Tuple2<BitSet, Double>, Tuple2<BitSet, Double>, Tuple2<BitSet, Double>>(){
-//
-//		/**
-//		 * 
-//		 */
-//		private static final long serialVersionUID = 219318770145624695L;
-//
-//		@Override
-//		public Tuple2<BitSet, Double> call(Tuple2<BitSet, Double> arg0,
-//				Tuple2<BitSet, Double> arg1) throws Exception {
-//			
-//			if (arg0._2() > arg1._2())
-//				return arg0;
-//			
-//			return arg1;
-//		}
-//    	  
-//      });
-      
+    	  for (int r = 0; r < maxFlips; r++) {
+    		  boolean doNoiseStep = RAND.nextFloat() < noise;
+    		  if (doNoiseStep) {
+    			  // get neighbor
+    			  BitSet state = (BitSet) currentState.clone();
+    			  for (int i = 0; i < MAX_NEIGHBOR_TRIES; i++) {
+    				  int index = RAND.nextInt(featureCount);
+    				  state.flip(index);
+    				  if (!visitedStates.contains(state)) {
+    					  break;
+    				  } else {
+    					  state.flip(index);
+    				  }
+    			  }
+
+    			  logMessage("Noise step, state = " + state.toString());
+
+    			  if (state != null)
+    			  {
+    				  BitSet[] stateList = new BitSet[1];
+    				  stateList[0] = state;
+    				  Tuple2<Double, BitSet> goal = EvaluateSubset(stateList, finalDataSet, finalHeaderNoSummary, finalHeaderWithSummary);
+    				  visitedStates.add(state);
+    				  if (goal._1() > maxGoal) {
+    					  maxGoal = goal._1(); // record performance
+    					  optimalState = goal._2(); // record feature set end
+    				  }
+
+    				  currentState = state;
+    			  }
+    		  } else {
+    			  Tuple2<Double,BitSet>neighborOptimalState = null;
+
+    			  BitSet[] neighborStates = new BitSet[greedyNeighbors];
+    			  for (int k = 0; k < greedyNeighbors; k++) {
+
+    				  // get neighbor
+    				  BitSet neighborState = (BitSet) currentState.clone();
+    				  for (int i = 0; i < MAX_NEIGHBOR_TRIES; i++) {
+    					  int index = RAND.nextInt(featureCount);
+    					  neighborState.flip(index);
+    					  if (!visitedStates.contains(neighborState)) {
+    						  break;
+    					  } else {
+    						  neighborState.flip(index);
+    					  }
+    				  }
+
+    				  visitedStates.add(neighborState);		                      
+    				  neighborStates[k] = neighborState;
+
+    			  }
+
+    			  logMessage("greedy step, neighborStates = ");
+    			  for (BitSet n : neighborStates)
+    			  {
+    				  logMessage(n.toString());
+    			  }
+
+    			  if (neighborStates != null)
+    			  {
+    				  neighborOptimalState = EvaluateSubset(neighborStates, finalDataSet, finalHeaderNoSummary, finalHeaderWithSummary);
+    			  }
+
+    			  currentState = neighborOptimalState._2();
+    			  if (currentState == null)
+    			  {
+    				  logMessage("current stage is null");
+    			  }
+    			  if (neighborOptimalState._1() > maxGoal) {
+    				  maxGoal = neighborOptimalState._1();
+    				  optimalState = neighborOptimalState._2();
+    			  }
+    			  logMessage("greedy step done, next state = " + currentState.toString());
+    		  }
+    	  }
+
+      }
+
       logMessage("all steps done, optimal state = " + optimalState.toString());
-      
+
       storeAndWriteEvalResults(optimalState, headerNoSummary, outputPath);
 
     } catch (Exception ex) {
-      logMessage(ex);
-      throw new DistributedWekaException(ex);
+    	logMessage(ex);
+    	throw new DistributedWekaException(ex);
     }
     setJobStatus(JobStatus.FINISHED);
 
     return true;
   }
   
-  protected double EvaluateSubset(BitSet subset, JavaRDD<Instance> dataSet, Instances headerNoSummary, Instances headerWithSummary ) throws Exception
-  {
-	  logMessage("Evaluate Subset: " + subset.toString());
-	  
+  protected PreconstructedFilter GetFilterFromBitSet(BitSet subset, Instances headerNoSummary)
+  {  
 	  Remove f = new Remove();
 	  
 	  f.setInvertSelection(true);
@@ -1046,10 +1256,8 @@ public class WekaAttributeSelectionSparkJob extends SparkJob implements
 		  }
 	  }
 	  
-	 logMessage("Num attributes = " + numFilteredAttribs);
-	  
 	  if (numFilteredAttribs <= 0)
-		  return Double.NEGATIVE_INFINITY;
+		  return null;
 
 	  // set up an array of attribute indexes for the filter
 	  int[] featureArray = new int[numFilteredAttribs+1];
@@ -1063,126 +1271,115 @@ public class WekaAttributeSelectionSparkJob extends SparkJob implements
 
 	  featureArray[j] = classIndex;
 	  
-	  m_debuglog.log("Feature array = " + featureArray.toString());
-	  
 	  f.setAttributeIndicesArray(featureArray);
 	  
-	  MakePreconstructedFilter wrapper = new MakePreconstructedFilter(f);
+	  return new MakePreconstructedFilter(f);
+  }
+  
+  protected Tuple2<Double, BitSet> EvaluateSubset(BitSet[] subsetList, JavaRDD<Instance> dataSet, Instances headerNoSummary, Instances headerWithSummary ) throws Exception
+  {
+//	  // this is for performance evaluation
+//	  int index = 0;
+//	  for (BitSet subset : subsetList)
+//	  {
+//		  subset.clear();
+//		  subset.flip(0,20);
+//		  subset.flip(index++);
+//	  }
 	  
-	// TODO preconstructed filters (third argument)
-      Classifier[] foldClassifiers =
-        phaseOneBuildClassifiers(dataSet, headerNoSummary, wrapper);
+	  logMessage("Evaluate Subsets: " );
+	  for (BitSet n : subsetList)
+      {
+    	  logMessage(n.toString());
+      }
 
-      Evaluation results =
-        phaseTwoEvaluateClassifiers(dataSet,
+	  final BitSet[] finalSubsets = subsetList;
+	  
+	  JavaPairRDD<BitSet, Instance> bitsetInstanceData =
+	  dataSet.mapPartitionsToPair(new PairFlatMapFunction<Iterator<Instance>, BitSet, Instance>() {
+
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = -7672702819274482635L;
+
+		@Override
+		public Iterable<Tuple2<BitSet, Instance>> call(Iterator<Instance> split)
+				throws Exception {
+			
+			List<Tuple2<BitSet, Instance>> returnValue = new ArrayList<Tuple2<BitSet, Instance>>();
+			
+			while (split.hasNext()) {
+                Instance current = split.next();
+                
+                for(BitSet s : finalSubsets)
+                {
+                	returnValue.add(new Tuple2<BitSet, Instance>(s, current));
+                }
+              }
+			
+			return returnValue;
+		}
+		  
+	  }, true);
+	  
+	  JavaPairRDD<BitSet, Iterable<Instance>> groupedData =  bitsetInstanceData.groupByKey();
+	  
+      Map<BitSet, Classifier[]> foldClassifiers =
+        phaseOneBuildClassifiers(groupedData, subsetList, headerNoSummary);
+      
+      logMessage("Phase 1 done");
+      for(Map.Entry<BitSet, Classifier[]> entry : foldClassifiers.entrySet())
+      {
+    	  logMessage("Bitset: " + entry.getKey().toString() + " Classifiers: " + entry.getValue().length);
+      }
+
+      List<Tuple2<BitSet,Evaluation>> results =
+        phaseTwoEvaluateClassifiers(groupedData,
           headerWithSummary, headerNoSummary, foldClassifiers);
 
-      Double eval;
-      if (headerNoSummary.classAttribute().isNominal()) {
-		  eval = -results.errorRate();
-	  } else {
-		  eval = -results.meanAbsoluteError();
-	  }
-      return eval;
+      // get best result
+      Double bestEval = Double.NEGATIVE_INFINITY;
+      BitSet bestSubset = null;
+      
+      logMessage("Result count = " + results.size());
+      
+      for (Tuple2<BitSet, Evaluation> result : results)
+      {
+    	  Double eval = Double.MIN_VALUE;
+    	  if (headerNoSummary.classAttribute().isNominal()) {
+    		  eval = -result._2().errorRate();
+    	  } else {
+    		  eval = -result._2().meanAbsoluteError();
+    	  }
+
+    	  if (eval.isNaN())
+    		  eval = (double) -100000000;
+    	  
+    	  logMessage("Result = " + result._1().toString() + " ==> " + eval);
+    	  
+    	  if (eval > bestEval)
+    	  {
+    		  bestEval = eval;
+    		  bestSubset = result._1();
+    	  }
+      }
+      
+      logMessage("Best Result = " + bestSubset.toString() + " ==> " + bestEval);
+      
+      return new Tuple2<Double, BitSet>(bestEval, bestSubset);
   }
   
 
-//  /**
-//   * evaluates a subset of attributes
-//   * 
-//   * @param subset a bitset representing the attribute subset to be evaluated
-//   * @return the merit
-//   * @throws Exception if the subset could not be evaluated
-//   */
-//  protected double EvaluateBitset(BitSet subset, JavaRDD<Instance> dataSet, Instances headerNoSummary, Instances headerWithSummary ) throws Exception
-//  {	  
-//	  m_debuglog.log(subset.toString());
-//	  
-//	  int numAttributes = 0;
-//	  double errorRate = 0;
-//	  
-//	  Random rand = new Random(System.currentTimeMillis());
-//	  
-//	  //dataSet.map
-//	  Instances trainInst = new Instances(m_trainInstances);
-//	  trainInst.randomize(rand);
-//	  
-//	  Remove delTransform = new Remove();
-//	  delTransform.setInvertSelection(true);
-//	  
-//	  for (int i = 0; i < m_numAttribs; i++)
-//	  {
-//		  if (subset.get(i) && i != m_classIndex)
-//		  {
-//			  numAttributes++;
-//		  }
-//	  }
-//	  
-//	  m_debuglog.log("Num attributes = " + numAttributes);
-//	  
-//	  if (numAttributes <= 0)
-//		  return Double.NEGATIVE_INFINITY;
-//
-//	  // set up an array of attribute indexes for the filter
-//	  int[] featureArray = new int[numAttributes+1];
-//	  int i, j;
-//	  
-//	  for (i = 0, j = 0; i < m_numAttribs; i++) {
-//		  if (subset.get(i) && i != m_classIndex) {
-//			  featureArray[j++] = i;
-//		  }
-//	  }
-//
-//	  featureArray[j] = m_classIndex;
-//	  
-//	  m_debuglog.log("Feature array = " + featureArray.toString());
-//	  
-//	  delTransform.setAttributeIndicesArray(featureArray);
-//	  delTransform.setInputFormat(trainInst);
-//	  trainInst = Filter.useFilter(trainInst, delTransform);
-//
-//	  int folds = 3;
-//	  trainInst.stratify(folds);
-//	  
-//	  for (int n = 0; n < folds; n++)
-//	  {
-//
-//		  m_debuglog.log("Eval fold = " + n);
-//		  
-//		  Instances train = trainInst.trainCV(folds, n);
-//		  Instances test =  trainInst.testCV(folds, n);
-//		   
-//		  // build the classifier
-//		  m_Classifier.buildClassifier(train);
-//		  
-//		  m_Evaluation = new Evaluation(train);
-//		  m_Evaluation.evaluateModel(m_Classifier, test);
-//
-//		  if (m_trainInstances.classAttribute().isNominal()) {
-//			  errorRate += m_Evaluation.errorRate();
-//		  } else {
-//			  errorRate += m_Evaluation.meanAbsoluteError();
-//		  }
-//
-//		  m_Evaluation = null;
-//		  // return the negative of the error as search methods need to
-//		  // maximize something
-//	  }
-//	  
-//
-//	  return -errorRate;
-//	  
-//  
-
   protected BitSet generateInitialState(int featureCount, Random RAND) {
-//      BitSet newState = new BitSet(featureCount);
-//      for (int i = 0; i < featureCount; ++i)
-//      {
-//    	  newState.flip(RAND.nextInt(featureCount));
-//      }
-//      
-//      return newState;
-	  return new BitSet(featureCount);
+      BitSet newState = new BitSet(featureCount);
+      for (int i = 0; i < featureCount; ++i)
+      {
+    	  if (RAND.nextFloat() < 0.5)
+    		  newState.flip(i);
+      }
+      
+      return newState;
   }
 
 
@@ -1207,6 +1404,21 @@ public class WekaAttributeSelectionSparkJob extends SparkJob implements
     info += ":\n";
     
     buff.append(state.toString());
+    
+    int classIndex = headerNoSummary.classIndex();
+    int numAttribs = headerNoSummary.numAttributes();
+    
+    buff.append("Label: " + headerNoSummary.classAttribute().toString() + "\n");
+    buff.append("Selected Attributes: \n");
+    for (int i = 0; i < numAttribs; i++)
+    {
+    	if (state.get(i) && i != classIndex)
+    	{
+    		buff.append(headerNoSummary.attribute(i).toString() + "\n");
+    	}
+    }
+    
+
 
     String evalOutputPath =
       outputPath
