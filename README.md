@@ -68,3 +68,32 @@ The flexible configuration file allows users to easily construct new features. T
     functions = max,min,average
     ...
 
+### Java sequential Implementation
+#### Build
+For sequential feature construction, Users should compile the code to generate the jar file from source code first. 
+
+**Software Requirements**:
+
+ - Java jre 1.7
+
+#### Preparation
+Users could do this step from command or IDE. Then, Users need to do following preparation work:
+1.     Create “inputData” directory under the same directory with Jar file.
+2.     Place all Google dataset under “inputData” directory.
+3.     Users should noted that, under “inputData” should be subdirectories of Google dataset, such as “job_events”, “task_events”, and “task_usage”.
+4.     Schema.cvs file should also under “inputData” directory.
+
+#### Run
+After all steps mentioned above, users could run the sequential feature generator with the following command:
+java –classpath FeatureGenerator.jar OneFeatureGenerator
+
+#### Extend
+The processes of the sequential feature construction code are:
+1.     Initialize the all Google dataset tables.
+2.     Get all table schemas as the key name with table name.
+3.     Initialize input and output files directories, and load all input gzip files under each subdirectories.
+4.     Initialize the generated feature structure.
+5.     Loading different tables to generate corresponding features.
+6.     Generate output result file.       	
+ 
+In step five; features are generated based on types of table. Therefore, each type of table to generate the feature, all gzip csv files will be decompressed first, analyzed, and deleted the decompressed files.
