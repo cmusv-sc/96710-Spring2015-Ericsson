@@ -70,14 +70,14 @@ The flexible configuration file allows users to easily construct new features. T
 
 ### Java sequential Implementation
 #### Build
-For sequential feature construction, Users should compile the code to generate the jar file from source code first. 
+For sequential feature construction, Users should compile the code to generate the jar file from source code first. Users could do this step from command or IDE.
 
 **Software Requirements**:
 
  - Java jre 1.7
 
 #### Preparation
-Users could do this step from command or IDE. Then, Users need to do following preparation work:
+Users need to do following preparation work:
 
 1. Create “inputData” directory under the same directory with Jar file.
 2. Place all Google dataset under “inputData” directory.
