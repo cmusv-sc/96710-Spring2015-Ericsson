@@ -102,8 +102,8 @@ The flexible configuration file allows users to easily construct new features. T
     ...
     
     [table_files]
-    task_events        = part-00000-of-00500.csv.gz
-    job_events         = part-00000-of-00500.csv.gz
+    task_events = part-00000-of-00500.csv.gz
+    job_events  = part-00000-of-00500.csv.gz
     ...
     
     ; FEATURES
