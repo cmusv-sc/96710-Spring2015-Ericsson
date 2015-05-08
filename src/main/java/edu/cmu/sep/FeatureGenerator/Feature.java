@@ -40,15 +40,9 @@ public abstract class Feature {
         String tableName = getTableName();
         
         for(String file : mFileList) {
-            String flatFile = "";
-            if (tableName.equals("job_events")) {
-                flatFile = file.substring(0, file.length() - 3);
-            } else if (tableName.equals("job_features")) {
-                flatFile = file;
-            } else {
-                GzipFile gzipFile = new GzipFile(file);
-                flatFile = gzipFile.gunZipFile();
-            }
+
+            GzipFile gzipFile = new GzipFile(file);
+            String flatFile = gzipFile.gunZipFile();
 
             FlatFileReader reader = new FlatFileReader(flatFile, ',');
             String[] tableRowArray;

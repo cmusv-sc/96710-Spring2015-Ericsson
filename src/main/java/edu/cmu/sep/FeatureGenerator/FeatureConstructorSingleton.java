@@ -25,6 +25,9 @@ public class FeatureConstructorSingleton {
     private HashMap<String, ArrayList<String>> mFileListHash;
     private LinkedHashMap<String, ArrayList<String>> mJobHash;
     private ArrayList<String> mGeneratedFeaturesSchema = new ArrayList<String>();
+    private String mDatasetRoot;
+    private String mOutputFile;
+    private int mFileCount;
     
     private FeatureConstructorSingleton() {}
     
@@ -35,26 +38,23 @@ public class FeatureConstructorSingleton {
         return mInstance;
     }
     
-    public void Initialize(int fileCount) {
+    public void Initialize(String datasetRoot, String outputFile, int fileCount) {
+
+        mDatasetRoot = datasetRoot;
+        mOutputFile = outputFile;
+        mFileCount = fileCount;
+
         generateTableList();
         generateSchemaHash();
-        generateFileListHash(fileCount);
+        generateFileListHash(mFileCount);
         generateJobHash();
         initializeOutputFile();
         
         addFeatureToSchema("job ID");
     }
     
-    private String getDatasetRoot() {
-        return "clusterdata-2011-2/";
-    }
-    
-    private String getOutputDir() {
-        return "outputData/";
-    }
-    
     private String getSchemaFile() {
-        return getDatasetRoot() + "schema.csv";
+        return mDatasetRoot + "/schema.csv";
     }
     
     private ArrayList<String> generateSchema(String table) throws IOException {
@@ -104,34 +104,28 @@ public class FeatureConstructorSingleton {
     public final ArrayList<String> getSchema(String table) {
         return mSchemaHash.get(table);
     }
-    
-    public String getOutputFeaturesFile() {
-        return getOutputDir() + "job_features.csv";
-    }
-    
+
     private ArrayList<String> generateFileList(String table, int fileCount) {
         
         ArrayList<String> tableList = new ArrayList<String>();
-        File tableFolder = new File(getDatasetRoot() + table);
+        File tableFolder = new File(mDatasetRoot + "/" + table);
 
-      if (!tableFolder.exists()) {
-        System.out.println("InputFile file does not exist.");
-        return tableList;
-      }
-
-        File[] tableFiles = tableFolder.listFiles();
-        int counter = 0;
-        for (File tableFile : tableFiles) {
-            if(tableFile.isFile() && tableFile.getName().endsWith(".gz")) {
+        if (!tableFolder.exists()) {
+            System.out.println("InputFile file does not exist.");
+            return tableList;
+        }
+        int numTableFiles = tableFolder.listFiles().length;
+        System.out.println(table + ": " + numTableFiles);
+        for(int i = 0; i < fileCount && i < numTableFiles; i++) {
+            File tableFile = new File(mDatasetRoot + "/" + table
+                    + String.format("/part-%05d-of-%05d.csv.gz", i, numTableFiles));
+            if(tableFile.isFile()) {
                 tableList.add(tableFile.getAbsolutePath());
-                counter++;
             }
-
-            if(counter >= fileCount) {
-                break;
+            else {
+                System.out.println(tableFile.getAbsolutePath() + " is not a file");
             }
         }
-        System.out.println(table + " SIZE " + tableList.size());
 
         return tableList;
     }
@@ -139,7 +133,8 @@ public class FeatureConstructorSingleton {
     private void generateFileListHash(int fileCount) {
         mFileListHash = new HashMap<String, ArrayList<String>>();
         for(String table : mTableArray) {
-            mFileListHash.put(table, generateFileList(table, fileCount));
+            ArrayList<String> fileList = generateFileList(table, fileCount);
+            mFileListHash.put(table, fileList);
         }
     }
     
@@ -148,7 +143,7 @@ public class FeatureConstructorSingleton {
             return mFileListHash.get(table);
         else {
             ArrayList<String> retVal = new ArrayList<String>();
-            retVal.add(getOutputFeaturesFile());
+            retVal.add(mOutputFile);
             return retVal;
         }
         
@@ -171,6 +166,8 @@ public class FeatureConstructorSingleton {
                     if(tableRowArray[jobIdIndex] == null) break;
                     mJobHash.put(tableRowArray[jobIdIndex], null);
                 } while (tableRowArray != null);
+                File deleteFile = new File(flatFile);
+                Files.deleteIfExists(deleteFile.toPath());
             } catch(IOException e) {
                 e.printStackTrace();
                 System.exit(1);
@@ -190,12 +187,8 @@ public class FeatureConstructorSingleton {
     }
   
     private void initializeOutputFile () {
-        File outputDir = new File(getOutputDir());
-        if (!outputDir.exists()) {
-          outputDir.mkdirs();
-        }
         try {
-            FileOutputStream outputStream = new FileOutputStream(getOutputFeaturesFile());
+            FileOutputStream outputStream = new FileOutputStream(mOutputFile);
             String endLine = "\n";
             String header = "job_id" + endLine;
             outputStream.write(header.getBytes());
@@ -211,11 +204,11 @@ public class FeatureConstructorSingleton {
     }
     
     public void updateOutputFile(ArrayList<String> featureSchema) {
-        File outputFeaturesFile = new File(getOutputFeaturesFile());
+        File outputFeaturesFile = new File(mOutputFile);
         if(!outputFeaturesFile.isFile()) {
             System.exit(1);
         }
-        File tempFile = new File(getOutputDir() + "temp.csv");
+        File tempFile = new File("temp.csv");
         if(tempFile.isFile()) {
             try {
                 Files.delete(tempFile.toPath());
@@ -238,36 +231,34 @@ public class FeatureConstructorSingleton {
              for(String header : featureSchema) {
                 headers +=  header + ",";
             }
-            headers = headers.substring(0, headers.length() - 2) + endLine;
+            headers += endLine;
             outputStream.write(headers.getBytes());
             for (Map.Entry<String, ArrayList<String>> entry : mJobHash.entrySet()) {
                 String lineToWrite = "";
                 for(String feature : inputReader.readRecord()) {
                     if(feature == null) break;
-                    lineToWrite += feature + ", ";
+                    lineToWrite += feature + ",";
                 }
-              ArrayList<String> values = entry.getValue();
-              if (values != null) {
-                for (int i = 0; i < values.size(); i++) {
-                /*
-                1. Job Duration
-                 2. Job failed
-                 3. Max, min, avg CPU rate
-                 */
-                  String value = values.get(i);
-                  if (value.contains("/")) {
-                    String[] numbers = value.split("/");
+                ArrayList<String> values = entry.getValue();
+                if (values != null) {
+                    for (int i = 0; i < values.size(); i++) {
+                        /*
+                        1. Job Duration
+                        2. Job failed
+                        3. Max, min, avg CPU rate
+                        */
+                        String value = values.get(i);
+                        if (value.contains("/")) {
+                            String[] numbers = value.split("/");
 
-                    Integer num = Integer.parseInt(numbers[1]);
-                    Float average = Float.parseFloat(numbers[0])/num;
-                    value = Float.toString(average);
-                  }
-                  lineToWrite += value + ", ";
+                            Integer num = Integer.parseInt(numbers[1]);
+                            Float average = Float.parseFloat(numbers[0])/num;
+                            value = Float.toString(average);
+                        }
+                        lineToWrite += value + ",";
+                    }
+                    lineToWrite += endLine;
                 }
-                lineToWrite = lineToWrite.substring(0, lineToWrite.length() - 2) + endLine;
-              } else {
-                lineToWrite = lineToWrite + ",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,," + endLine;
-              }
 
                 outputStream.write(lineToWrite.getBytes());
             }

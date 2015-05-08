@@ -21,25 +21,27 @@ public class JobEventsFeature extends Feature {
     }
         
     public void generateFeatureSingleValue(String[] tableRowArray) {
-      String jobId = tableRowArray[mJobIdIndex];
-      String eventType = tableRowArray[mTableSchema.indexOf("event type")];
 
-      if(!mJobHash.containsKey(jobId)) {
-        return;
-      }
-      String status = "NO_FAIL";
-      if(Integer.parseInt(eventType) == 3) {
-        status = "FAIL";
-      }
-      ArrayList<String> value = mJobHash.get(jobId);
-      if (value == null) {
-        value = new ArrayList<String>();
-        value.add(status);
-      } else {
+        // Define job events features
+        String jobId = tableRowArray[mJobIdIndex];
+        String eventType = tableRowArray[mTableSchema.indexOf("event type")];
+
+        if(!mJobHash.containsKey(jobId)) {
+            return;
+        }
+        String status = "NO_FAIL";
+            if(Integer.parseInt(eventType) == 3) {
+            status = "FAIL";
+        }
+        ArrayList<String> value = mJobHash.get(jobId);
+        if (value == null) {
+            value = new ArrayList<String>();
+            value.add(status);
+        } else {
         if (value.get(0).equals("NO_FAIL"))
             value.set(0, status);
-      }
-      mJobHash.put(jobId, value);
+        }
+        mJobHash.put(jobId, value);
     }
     
     protected void addFeatureToSchema() {
