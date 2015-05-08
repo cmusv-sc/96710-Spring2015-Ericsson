@@ -70,39 +70,43 @@ The flexible configuration file allows users to easily construct new features. T
 
 ### Java sequential Implementation
 #### Build
-For sequential feature construction, Users should compile the code to generate the jar file from source code first. Users could do this step in:
+For sequential feature construction, users should first compile the code to generate the JAR file:
 
-    1. Use command line to generate JAR file.
-    2. Importing project from IDE, and generate JAR file from IDE.
+   1. Use the command line to generate JAR file using Maven. 
+       - ```mvn package```
+   2. Importing project from IDE, and generate JAR file from IDE.
 
 **Software Requirements**:
 
- - Java jre 1.7
+ - Java JRE 1.7
+ - Maven (Optional)
+ - IDE (Optional)
 
 #### Preparation
 Users need to do following preparation work:
 
-    1. Create "inputData" directory under the same directory with Jar file.
-    2. Place all Google dataset under "inputData" directory.
-    3. Users should noted that, under "inputData" should be subdirectories of Google dataset, such as "job_events", "task_events", and "task_usage".
-    4. Schema.cvs file should also under "inputData" directory.
+   1. Create an ```inputData``` directory under the same directory with JAR file.
+   2. Download the Google dataset into the ```inputData``` directory.
+       - **NOTE**: Under ```inputData``` should be subdirectories of the Google dataset, such as ```job_events```, ```task_events```, and ```task_usage```.
+   4. The ```Schema.csv``` file should also be under the ```inputData``` directory.
 
 
 #### Run
-After all steps mentioned above, users could run the sequential feature generator with the following command:
+After completing the preparation steps mentioned above, users can run the sequential feature generator with the following command:
 
 ```sh
 $ java –classpath FeatureGenerator.jar OneFeatureGenerator
 ```
 
 #### Extend
-The processes of the sequential feature construction code are:
+The sequential feature construction process:
 
-    1. Initialize the all Google dataset tables.
-    2. Get all table schemas as the key name with table name.
-    3. Initialize input and output files directories, and load all input gzip files under each subdirectories.
-    4. Initialize the generated feature structure.
-    5. Loading different tables to generate corresponding features.
-    6. Generate output result file.       	
- 
-    In step five; features are generated based on types of table. Therefore, each type of table to generate the feature, all gzip csv files will be decompressed first, analyzed, and deleted the decompressed files.
+1. Initialize all Google dataset tables
+2. Get all table schemas as the key name with table name
+3. Initialize input and output files directories, and load all input .gzip files under each subdirectory
+4. Initialize the generated feature structure
+5. Load different tables to generate corresponding features
+    - **NOTE**: All processed CSV files are uncompressed then analyzed. After processing, the uncompressed file is deleted.
+6. Generate the output result file
+
+To add or modify features, the respective table class should be edited with the aggregation algorithm and derived fields.
