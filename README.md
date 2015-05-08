@@ -6,7 +6,52 @@ Software Engineering Practicum - CMU S15 - Ericsson Team
 - **Client:** Ericsson Research
 
 ## Feature Construction
-### Spark Implementation
+
+### Sequential Implementation (Java)
+
+#### Build
+For sequential feature construction, users should first compile the code to generate the JAR file:
+
+1. Use the command line to generate JAR file using Maven. 
+   - ```mvn package```
+2. Importing project from IDE, and generate JAR file from IDE.
+
+**Software Requirements**:
+
+ - Java JRE 1.7
+ - Maven (Optional)
+ - IDE (Optional)
+
+#### Preparation
+Users need to do following preparation work:
+
+1. Create an ```inputData``` directory under the same directory with JAR file
+2. Download the [Google ```ClusterData2011_2 ```](https://code.google.com/p/googleclusterdata/) into the ```inputData``` directory.
+   - **NOTE**: Under ```inputData``` should be subdirectories of the Google dataset, such as ```job_events```, ```task_events```, and ```task_usage```
+3. The ```Schema.csv``` file should also be under the ```inputData``` directory
+
+
+#### Run
+After completing the preparation steps mentioned above, users can run the sequential feature generator with the following command:
+
+```sh
+$ java –classpath FeatureGenerator.jar OneFeatureGenerator
+```
+
+#### Extend
+The sequential feature construction process:
+
+1. Initialize all Google dataset tables
+2. Get all table schemas as the key name with table name
+3. Initialize input and output files directories, and load all input .gzip files under each subdirectory
+4. Initialize the generated feature structure
+5. Load different tables to generate corresponding features
+    - **NOTE**: All processed CSV files are uncompressed then analyzed. After processing, the uncompressed file is deleted
+6. Generate the output result file
+
+To add or modify features, the respective table class should be edited with the aggregation algorithm and derived fields.
+
+### Spark Implementation (Python)
 
 #### Build
 The feature construction Spark implementation is written in Python and therefore does not require compilation. 
@@ -14,7 +59,11 @@ The feature construction Spark implementation is written in Python and therefore
 **Software Requirements**:
 
  - Python 2.7
- - Spark 1.2
+ - [Spark 1.2+](https://spark.apache.org/downloads.html)
+
+#### Preparation
+1. Download all or a subset of the [Google ```ClusterData2011_2 ```](https://code.google.com/p/googleclusterdata/)
+2. Optional: Copy and modify the default config file (```/src/main/resources/config/feature_construction.ini```)
 
 #### Run
     # SPARK_DIR       - Spark installation directory
@@ -68,45 +117,3 @@ The flexible configuration file allows users to easily construct new features. T
     functions = max,min,average
     ...
 
-### Java sequential Implementation
-#### Build
-For sequential feature construction, users should first compile the code to generate the JAR file:
-
-   1. Use the command line to generate JAR file using Maven. 
-       - ```mvn package```
-   2. Importing project from IDE, and generate JAR file from IDE.
-
-**Software Requirements**:
-
- - Java JRE 1.7
- - Maven (Optional)
- - IDE (Optional)
-
-#### Preparation
-Users need to do following preparation work:
-
-   1. Create an ```inputData``` directory under the same directory with JAR file.
-   2. Download the Google dataset into the ```inputData``` directory.
-       - **NOTE**: Under ```inputData``` should be subdirectories of the Google dataset, such as ```job_events```, ```task_events```, and ```task_usage```.
-   4. The ```Schema.csv``` file should also be under the ```inputData``` directory.
-
-
-#### Run
-After completing the preparation steps mentioned above, users can run the sequential feature generator with the following command:
-
-```sh
-$ java –classpath FeatureGenerator.jar OneFeatureGenerator
-```
-
-#### Extend
-The sequential feature construction process:
-
-1. Initialize all Google dataset tables
-2. Get all table schemas as the key name with table name
-3. Initialize input and output files directories, and load all input .gzip files under each subdirectory
-4. Initialize the generated feature structure
-5. Load different tables to generate corresponding features
-    - **NOTE**: All processed CSV files are uncompressed then analyzed. After processing, the uncompressed file is deleted.
-6. Generate the output result file
-
-To add or modify features, the respective table class should be edited with the aggregation algorithm and derived fields.
