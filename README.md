@@ -121,6 +121,7 @@ The flexible configuration file allows users to easily construct new features. T
 
 ### Requirements
 The following software is required to build and run the Feature Selection package in this repo:
+
 1. Weka 3.7.12
 2. Java JRE 1.7
 3. Eclipse Java IDE
