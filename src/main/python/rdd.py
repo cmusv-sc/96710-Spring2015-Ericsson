@@ -25,6 +25,7 @@ def write_records(fields, records):
 
 
 def field_rdd(table_rdd, key, fields):
+    """Create a pair RDD with the table key and list of fields"""
     if len(fields) == 1:
         return table_rdd.map(lambda entry:
                              (int(entry[key]), float(entry[fields[0]])
@@ -37,6 +38,7 @@ def field_rdd(table_rdd, key, fields):
 
 
 def join_rdds(rdds):
+    """Join a list of pair RDDs by the first element"""
     joined = rdds[0]
     for i in range(1, len(rdds)):
         joined = joined.join(rdds[i])
