@@ -1,5 +1,5 @@
 # Big Data Feature Construction & Selection
-Software Engineering Practicum - CMU S15 - Ericsson Team
+Software Engineering Practicum - CMU S15 - Ericsson Research Team
 
 - **Developers:** Rohit Kabadi, Khoa DoBa, Jacob Wu, Joe Mirizio
 - **Advisor:** Ole J. Mengshoel
