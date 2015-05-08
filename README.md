@@ -28,7 +28,7 @@ Users need to do following preparation work:
 
 1. Create an ```inputData``` directory under the same directory with JAR file
 2. Download the [Google ```ClusterData2011_2 ```](https://code.google.com/p/googleclusterdata/) into the ```inputData``` directory.
-   - **NOTE**: Under ```inputData``` should be subdirectories of the Google dataset, such as ```job_events```, ```task_events```, and ```task_usage```
+    - **NOTE**: Under ```inputData``` should be subdirectories of the Google dataset, such as ```job_events```, ```task_events```, and ```task_usage```
 3. The ```Schema.csv``` file should also be under the ```inputData``` directory
 
 
@@ -44,7 +44,7 @@ The sequential feature construction process:
 
 1. Initialize all Google dataset tables
 2. Get all table schemas as the key name with table name
-3. Initialize input and output files directories, and load all input .gzip files under each subdirectory
+3. Initialize input and output files directories, and load all input ```.gzip``` files under each subdirectory
 4. Initialize the generated feature structure
 5. Load different tables to generate corresponding features
     - **NOTE**: All processed CSV files are uncompressed then analyzed. After processing, the uncompressed file is deleted
@@ -94,6 +94,7 @@ The flexible configuration file allows users to easily construct new features. T
     - ```functions```: List of aggregation functions to apply
 3. Implement the aggregation functions in ```feature.py```
 
+---
     [main]
     tables   = task_events,job_events,...
     key      = job ID
@@ -115,4 +116,3 @@ The flexible configuration file allows users to easily construct new features. T
     table     = task_usage
     functions = max,min,average
     ...
-
