@@ -5,6 +5,7 @@ Software Engineering Practicum - CMU S15 - Ericsson Team
 - **Advisor:** Ole J. Mengshoel
 - **Client:** Ericsson Research
 
+
 ## Feature Construction
 
 ### Sequential Implementation (Java)
@@ -86,7 +87,6 @@ The feature construction Spark implementation is written in Python and therefore
 #### Extend
 The flexible configuration file allows users to easily construct new features. To add a new feature:
 
-
 1. Add the feature name to the ```features ``` list in the  ```[main]``` section
 2. Add a section with the name of the feature containing:
     - ```table```: Table containing the data
@@ -94,7 +94,6 @@ The flexible configuration file allows users to easily construct new features. T
     - ```functions```: List of aggregation functions to apply
 3. Implement the aggregation functions in ```feature.py```
 
----
     [main]
     tables   = task_events,job_events,...
     key      = job ID
