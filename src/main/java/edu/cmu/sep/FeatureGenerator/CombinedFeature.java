@@ -40,7 +40,6 @@ public class CombinedFeature extends Feature {
             cpuRate = Float.parseFloat(tableRowArray[FeatureConstructorSingleton.getInstance().getGeneratedFeaturesSchema().indexOf("avg_cpu_rate")]);
             diskIOTime = Float.parseFloat(tableRowArray[FeatureConstructorSingleton.getInstance().getGeneratedFeaturesSchema().indexOf("avg_disk_io_time")]);
         } catch (Exception e) {
-            e.printStackTrace();
         }
 
         if(!mJobHash.containsKey(jobId)) {
@@ -52,7 +51,7 @@ public class CombinedFeature extends Feature {
             values = new ArrayList<String>();
             Float assignedVsMaximumMemoryUsage = maximumMemoryUsage == 0? 0 : (assignedMemoryUsage) / (maximumMemoryUsage);
             Float canonicalVsMaximumMemoryUsage = maximumMemoryUsage == 0? 0 : (canonicalMemoryUsage) / (maximumMemoryUsage);
-            Float unmappedVsTotalPageCacheRatio = maximumMemoryUsage == 0? 0 : (unmappedPageCache) / (totalPageCache);
+            Float unmappedVsTotalPageCacheRatio = totalPageCache == 0? 0 : (unmappedPageCache) / (totalPageCache);
             Float cpuRateAndAssignedMemoryUsage = assignedMemoryUsage == 0? 0 : (cpuRate) * (assignedMemoryUsage);
             Float cpuRateAndCanonicalMemoryUsage = canonicalMemoryUsage == 0? 0 : (cpuRate) * (canonicalMemoryUsage);
             Float cpuRateAndMaximumMemoryUsage = (cpuRate) * (maximumMemoryUsage);
