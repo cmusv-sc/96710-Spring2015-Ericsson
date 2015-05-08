@@ -116,3 +116,22 @@ The flexible configuration file allows users to easily construct new features. T
     table     = task_usage
     functions = max,min,average
     ...
+
+## Feature Selection
+
+### Requirements
+The following software is required to build and run the Feature Selection package in this repo:
+1. Weka 3.7.12
+2. Java JRE 1.7
+3. Eclipse Java IDE
+4. Spark 1.2.1 with Hadoop 2.4
+
+### Build and Installation Instruction
+1. Install Weka
+2. In Weka's Package Manager, install distributedWekaBase and distributedWekaSpark
+3. Load the Feature Selection project on Eclipse and compile the code to a jar file
+4. Overwrite the new jar file with this file: wekafiles/packages/distributedWekaPark/distributedWekaSpark.jar
+5. Relaunch Weka and start Knowledge Flow
+
+### Run Instruction Video
+https://www.youtube.com/watch?v=AyzMb9Khi7E
