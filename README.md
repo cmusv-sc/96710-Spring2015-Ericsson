@@ -86,9 +86,11 @@ The feature construction Spark implementation is written in Python and therefore
 
 In some cases the output data will need to be cleaned. Python likes to put exponentials in the output.
 If this happens you can run clean.py on the CSV files to remove this formatting.
+
     $ clean.py ${OUTPUT_DIR}/part*
 
 To combine all part files, you can use a file editor or unix utility like ```cat```.
+
     $ cat ${OUTPUT_DIR}/part* > features.csv
 
 
